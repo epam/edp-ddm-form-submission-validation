@@ -27,9 +27,23 @@ import {
 import { FormNotFoundError, InvalidTokenError } from '#app/services/form-provider/types';
 import type { FormSchema } from '#app/types/forms';
 import { FormSubmission } from '#app/types/forms';
+import { RequestTrace } from '#app/logging/decorators';
+import { Trace } from '#app/logging/types';
 
 const ACCESS_TOKEN_NAME = 'X-Access-Token';
 
+@ApiHeader({
+  name: 'X-B3-TraceId',
+  required: false,
+})
+@ApiHeader({
+  name: 'X-B3-SpanId',
+  required: false,
+})
+@ApiHeader({
+  name: 'X-Request-Id',
+  required: false,
+})
 @Controller('api/form-submissions')
 export class FormSubmissionsController {
   constructor(
@@ -37,20 +51,37 @@ export class FormSubmissionsController {
     protected readonly _validation: FormValidationService,
   ) {}
 
-  protected _getSchema(accessToken: string, formKey: string): Promise<FormSchema> {
+  protected _getSchema(trace: Trace, accessToken: string, formKey: string): Promise<FormSchema> {
     if (!accessToken) {
       throw new UnauthorizedException(); // TODO: i18n
     }
 
-    return this._provider.getForm(accessToken, formKey).catch((err) => {
+    return this._provider.getForm(trace, accessToken, formKey).catch((err) => {
       if (err instanceof InvalidTokenError) {
-        throw new UnauthorizedException('Wrong access token!'); // TODO: i18n
+        trace.logger.error(`Wrong access token!`, {
+          responseCode: 401,
+        });
+        throw new UnauthorizedException({
+          traceId: trace.traceId,
+          message: 'Wrong access token!', // TODO: i18n
+        });
       }
       if (err instanceof FormNotFoundError) {
-        throw new NotFoundException('Form is not found!'); // TODO: i18n
+        trace.logger.error(`Schema [${formKey}] is not found!`, {
+          responseCode: 404,
+        });
+        throw new NotFoundException({
+          traceId: trace.traceId,
+          message: 'Form is not found!', // TODO: i18n
+        });
       }
-      console.error(err);
-      throw new InternalServerErrorException('Unknown error while getting the form'); // TODO: i18n
+      trace.logger.error(err?.message ?? 'Unknown error', {
+        responseCode: 500,
+      });
+      throw new InternalServerErrorException({
+        traceId: trace.traceId,
+        message: 'Unknown error while getting the form', // TODO: i18n
+      });
     });
   }
 
@@ -100,18 +131,29 @@ export class FormSubmissionsController {
     @Headers(ACCESS_TOKEN_NAME) accessToken: string,
     @Param('formKey') formKey: string,
     @Body() body: FormSchemaDTO,
+    @RequestTrace() trace: Trace,
   ): Promise<{ data: FormSubmission['data'] }> {
-    const schema = await this._getSchema(accessToken, formKey);
+    trace.logger.info(`Loading schema [${formKey}]`);
+    const schema = await this._getSchema(trace, accessToken, formKey);
 
     try {
+      trace.logger.info(`Validating against schema [${formKey}]`);
+      const data = await this._validation.validate(schema, body);
+      trace.logger.info(`Submission data for schema [${formKey}] seems to be valid ...`, {
+        responseCode: 200,
+      });
       // TODO: normalize response format
       return {
-        data: await this._validation.validate(schema, body),
+        data,
       };
     } catch (err) {
       if (err instanceof FormValidationError) {
+        trace.logger.error(`Submission for schema [${formKey}] is invalid!`, {
+          responseCode: 422,
+        });
         throw new HttpException(
           {
+            traceId: trace.traceId,
             name: 'ValidationError',
             details: err.details,
           },
@@ -119,7 +161,13 @@ export class FormSubmissionsController {
         );
       }
 
-      throw new InternalServerErrorException('Unknown validation error'); // TODO: i18n
+      trace.logger.error(`Unknown error while validating schema [${formKey}]`, {
+        responseCode: 500,
+      });
+      throw new InternalServerErrorException({
+        traceId: trace.traceId,
+        message: 'Unknown validation error', // TODO: i18n
+      });
     }
   }
 
@@ -197,21 +245,38 @@ export class FormSubmissionsController {
     @Param('formKey') formKey: string,
     @Param('fieldKey') fieldKey: string,
     @Body() body: FormFieldValidationDTO,
+    @RequestTrace() trace: Trace,
   ): Promise<{ isValid: boolean; message?: string }> {
-    const schema = await this._getSchema(accessToken, formKey);
+    trace.logger.info(`Loading schema [${formKey}]`);
+    const schema = await this._getSchema(trace, accessToken, formKey);
 
     try {
       const result = this._validation.validateFileMeta(schema, fieldKey, body);
       if (result) {
+        trace.logger.info(`File meta validation (schema [${formKey}])`, {
+          responseCode: 200,
+        });
         return {
           isValid: false,
         };
       } else {
-        throw new InternalServerErrorException('Unknown error while validating the form'); // TODO: i18n
+        trace.logger.error(`Unknown error while validating schema [${formKey}]`, {
+          responseCode: 500,
+        });
+        throw new InternalServerErrorException({
+          traceId: trace.traceId,
+          message: 'Unknown error while validating the form', // TODO: i18n
+        });
       }
     } catch (err) {
       if (err instanceof FormFieldNotFoundError) {
-        throw new NotFoundException(err.message);
+        trace.logger.error(`Field [${fieldKey}] is not found in the schema [${formKey}]`, {
+          responseCode: 404,
+        });
+        throw new NotFoundException({
+          traceId: trace.traceId,
+          message: err.message,
+        });
       }
       if (
         err instanceof UnsupportedFileTypeError ||
@@ -219,8 +284,12 @@ export class FormSubmissionsController {
         err instanceof FileMaxSizeError ||
         err instanceof MissingFormComponentError
       ) {
+        trace.logger.error(`Field [${fieldKey}] submission data is not valid for the schema [${formKey}]`, {
+          responseCode: 422,
+        });
         throw new HttpException(
           {
+            traceId: trace.traceId,
             isValid: false,
             code: 422,
             message: err.message,
@@ -229,8 +298,16 @@ export class FormSubmissionsController {
           422,
         );
       }
-      console.error('Error during validation', err);
-      throw new InternalServerErrorException('Unknown error while validating the form'); // TODO: i18n
+      trace.logger.error(
+        `Unknown error while validating the field [${fieldKey}] submission data against the schema [${formKey}]`,
+        {
+          responseCode: 500,
+        },
+      );
+      throw new InternalServerErrorException({
+        traceId: trace.traceId,
+        message: 'Unknown error while validating the form', // TODO: i18n
+      });
     }
   }
 
@@ -293,12 +370,14 @@ export class FormSubmissionsController {
     @Headers(ACCESS_TOKEN_NAME) accessToken: string,
     @Param('formKey') formKey: string,
     @Body() body: FormFieldsCheckDTO,
+    @RequestTrace() trace: Trace,
   ): Promise<{
     code?: number;
     fields: Record<string, boolean>;
     message?: string;
   }> {
-    const schema = await this._getSchema(accessToken, formKey);
+    trace.logger.info(`Loading schema [${formKey}]`);
+    const schema = await this._getSchema(trace, accessToken, formKey);
 
     const checkedFields = this._validation.checkFieldsExistence(schema, body.fields ?? []);
     const badFields: string[] = [];
@@ -309,15 +388,22 @@ export class FormSubmissionsController {
       }
     });
     if (badFields.length) {
+      trace.logger.error(`Task form does not have fields with names: ${badFields.join(', ')}`, {
+        responseCode: 422,
+      });
       throw new HttpException(
         {
+          traceId: trace.traceId,
           code: 422,
-          message: `Task form does not have fields with names: ${badFields.join(', ')}`,
+          message: `Task form does not have fields with names: ${badFields.join(', ')}`, // TODO: i18n
           fields: Object.fromEntries(checkedFields),
         },
         422,
       );
     } else {
+      trace.logger.info(`Requested fields exist`, {
+        responseCode: 200,
+      });
       return {
         code: 200,
         fields: Object.fromEntries(checkedFields),

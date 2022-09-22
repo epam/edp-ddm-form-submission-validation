@@ -1,6 +1,7 @@
 import { FormValidationError, FormValidationService } from '#app/services/form-validation/exports';
 import { BaseFormProviderService, MockedFormProviderService } from '#app/services/form-provider/exports';
 import type { FormSchema, FormSubmission } from '#app/types/forms';
+import { Trace } from '#app/logging/types';
 
 async function _formatValidatePromiseResult(p: Promise<unknown>): Promise<unknown> {
   return p
@@ -19,11 +20,15 @@ async function _formatValidatePromiseResult(p: Promise<unknown>): Promise<unknow
 describe('FormValidationService', () => {
   let $formValidation: FormValidationService;
   let $formProvider: BaseFormProviderService;
+  let trace: Trace;
   const token = 'abcd';
 
   beforeEach(async () => {
     $formValidation = new FormValidationService();
     $formProvider = new MockedFormProviderService();
+    trace = new Trace({
+      'X-B3-TraceId': 'test1234',
+    });
   });
 
   describe('Form submission validation', () => {
@@ -31,7 +36,7 @@ describe('FormValidationService', () => {
       let formSchema: FormSchema;
       beforeEach(async () => {
         const key = 'edit-personprofile-firstbpmn';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('empty submission', async () => {
@@ -111,7 +116,7 @@ describe('FormValidationService', () => {
       let formSchema: FormSchema;
       beforeEach(async () => {
         const key = 'user';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('password', async () => {
@@ -136,7 +141,7 @@ describe('FormValidationService', () => {
       let formSchema: FormSchema;
       beforeEach(async () => {
         const key = 'test-password';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('passwords', async () => {
@@ -180,7 +185,7 @@ describe('FormValidationService', () => {
       let formSchema: FormSchema;
       beforeEach(async () => {
         const key = 'mdtuddm-12887';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('empty', async () => {
@@ -222,7 +227,7 @@ describe('FormValidationService', () => {
       let formSchema: FormSchema;
       beforeEach(async () => {
         const key = 'mdtuddm-11573';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('empty', async () => {
@@ -328,7 +333,7 @@ describe('FormValidationService', () => {
       let formSchema: FormSchema;
       beforeEach(async () => {
         const key = 'mdtuddm-16614-complex-validation';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('empty', async () => {
@@ -587,7 +592,7 @@ describe('FormValidationService', () => {
       let formSchema: FormSchema;
       beforeEach(async () => {
         const key = 'form-with-all-fields-for-validation';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('complex submission', async () => {
@@ -649,7 +654,7 @@ describe('FormValidationService', () => {
       let formSchema: FormSchema;
       beforeEach(async () => {
         const key = 'auto-form-with-files-upload-validation-soma';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('if checksum = "", should return ValidationError', async () => {
@@ -742,7 +747,7 @@ describe('FormValidationService', () => {
     describe('add-lab-file', () => {
       beforeEach(async () => {
         const key = 'add-lab-file';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('proper file', () => {
@@ -814,7 +819,7 @@ describe('FormValidationService', () => {
     describe('mdtuddm-11573', () => {
       beforeEach(async () => {
         const key = 'mdtuddm-11573';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('nested component', () => {
@@ -827,7 +832,7 @@ describe('FormValidationService', () => {
     describe('add-lab-file', () => {
       beforeEach(async () => {
         const key = 'add-lab-file';
-        formSchema = await $formProvider.getForm(token, key);
+        formSchema = await $formProvider.getForm(trace, token, key);
       });
 
       it('check zero fields', () => {
