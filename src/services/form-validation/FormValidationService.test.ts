@@ -26,558 +26,622 @@ describe('FormValidationService', () => {
     $formProvider = new MockedFormProviderService();
   });
 
-  describe('edit-personprofile-firstbpmn', () => {
-    let formSchema: FormSchema;
-    beforeEach(async () => {
-      const key = 'edit-personprofile-firstbpmn';
-      formSchema = await $formProvider.getForm(token, key);
-    });
-
-    it('empty submission', async () => {
-      try {
-        await _formatValidatePromiseResult($formValidation.validate(formSchema, {} as FormSubmission));
-      } catch (err) {
-        expect((err as Error).message).toEqual('No data in submission!');
-      }
-    });
-
-    it('empty data', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
-          data: {},
-        }),
-      );
-      expect(received).toEqual({
-        data: {},
+  describe('Form submission validation', () => {
+    describe('edit-personprofile-firstbpmn', () => {
+      let formSchema: FormSchema;
+      beforeEach(async () => {
+        const key = 'edit-personprofile-firstbpmn';
+        formSchema = await $formProvider.getForm(token, key);
       });
-    });
 
-    it('empty with meta', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
-          _id: '62a30efb91d5167a4ceee5a3',
-          data: {},
-          name: 'abc',
-          title: 'abc',
-          path: 'abc',
-        } as FormSubmission),
-      );
-      expect(received).toEqual({
-        data: {},
+      it('empty submission', async () => {
+        try {
+          await _formatValidatePromiseResult($formValidation.validate(formSchema, {} as FormSubmission));
+        } catch (err) {
+          expect((err as Error).message).toEqual('No data in submission!');
+        }
       });
-    });
 
-    it('lastName', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('empty data', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {},
+          }),
+        );
+        expect(received).toEqual({
+          data: {},
+        });
+      });
+
+      it('empty with meta', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            _id: '62a30efb91d5167a4ceee5a3',
+            data: {},
+            name: 'abc',
+            title: 'abc',
+            path: 'abc',
+          } as FormSubmission),
+        );
+        expect(received).toEqual({
+          data: {},
+        });
+      });
+
+      it('lastName', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              lastName: 'def',
+            },
+          }),
+        );
+        expect(received).toEqual({
           data: {
             lastName: 'def',
+            first_name: '',
+            birthday: '',
           },
-        }),
-      );
-      expect(received).toEqual({
-        data: {
-          lastName: 'def',
-          first_name: '',
-          birthday: '',
-        },
+        });
       });
-    });
 
-    it('numeric', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('numeric', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              lastName: 111,
+              last_name: 222,
+              firstName: '333',
+              first_name: '444',
+            },
+          }),
+        );
+
+        expect(received).toEqual({
           data: {
             lastName: 111,
-            last_name: 222,
-            firstName: '333',
             first_name: '444',
+            birthday: '',
           },
-        }),
-      );
-
-      expect(received).toEqual({
-        data: {
-          lastName: 111,
-          first_name: '444',
-          birthday: '',
-        },
+        });
       });
     });
-  });
 
-  describe('user', () => {
-    let formSchema: FormSchema;
-    beforeEach(async () => {
-      const key = 'user';
-      formSchema = await $formProvider.getForm(token, key);
-    });
+    describe('user', () => {
+      let formSchema: FormSchema;
+      beforeEach(async () => {
+        const key = 'user';
+        formSchema = await $formProvider.getForm(token, key);
+      });
 
-    it('password', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('password', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              email: 'user@example.com',
+              password: 'abcd1234',
+            },
+          }),
+        );
+        expect(received).toEqual({
           data: {
             email: 'user@example.com',
             password: 'abcd1234',
           },
-        }),
-      );
-      expect(received).toEqual({
-        data: {
-          email: 'user@example.com',
-          password: 'abcd1234',
-        },
+        });
       });
     });
-  });
 
-  describe('test-password', () => {
-    let formSchema: FormSchema;
-    beforeEach(async () => {
-      const key = 'test-password';
-      formSchema = await $formProvider.getForm(token, key);
-    });
+    describe('test-password', () => {
+      let formSchema: FormSchema;
+      beforeEach(async () => {
+        const key = 'test-password';
+        formSchema = await $formProvider.getForm(token, key);
+      });
 
-    it('passwords', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('passwords', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              email: 'user@example.com',
+              'email-not-persistent': 'admin@example.com',
+              password: 'abcd1234',
+              'password-not-persistent': 'ab12cd34',
+              'password-default-value': 'pass',
+            },
+          }),
+        );
+        expect(received).toEqual({
           data: {
             email: 'user@example.com',
-            'email-not-persistent': 'admin@example.com',
             password: 'abcd1234',
-            'password-not-persistent': 'ab12cd34',
-            'password-default-value': 'pass',
           },
-        }),
-      );
-      expect(received).toEqual({
-        data: {
-          email: 'user@example.com',
-          password: 'abcd1234',
-        },
+        });
       });
-    });
 
-    it('password with default value', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('password with default value', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              'password-default-value': 'pass2',
+            },
+          }),
+        );
+        expect(received).toEqual({
           data: {
+            email: '',
             'password-default-value': 'pass2',
           },
-        }),
-      );
-      expect(received).toEqual({
-        data: {
-          email: '',
-          'password-default-value': 'pass2',
-        },
+        });
       });
     });
-  });
 
-  describe('mdtuddm-12887', () => {
-    let formSchema: FormSchema;
-    beforeEach(async () => {
-      const key = 'mdtuddm-12887';
-      formSchema = await $formProvider.getForm(token, key);
-    });
+    describe('mdtuddm-12887', () => {
+      let formSchema: FormSchema;
+      beforeEach(async () => {
+        const key = 'mdtuddm-12887';
+        formSchema = await $formProvider.getForm(token, key);
+      });
 
-    it('empty', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('empty', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {},
+          }),
+        );
+
+        expect(received).toEqual({
           data: {},
-        }),
-      );
-
-      expect(received).toEqual({
-        data: {},
+        });
       });
-    });
 
-    it('selectLatest2', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('selectLatest2', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              selectLatest2: 'selected',
+            },
+          }),
+        );
+
+        expect(received).toEqual({
           data: {
+            selectLatest: {},
+            selectLatest1: {},
             selectLatest2: 'selected',
+            selectLatest3: '',
+            selectLatest4: '',
+            selectLatest5: '',
+            selectLatest6: '',
           },
-        }),
-      );
-
-      expect(received).toEqual({
-        data: {
-          selectLatest: {},
-          selectLatest1: {},
-          selectLatest2: 'selected',
-          selectLatest3: '',
-          selectLatest4: '',
-          selectLatest5: '',
-          selectLatest6: '',
-        },
+        });
       });
     });
-  });
 
-  describe('mdtuddm-11573', () => {
-    let formSchema: FormSchema;
-    beforeEach(async () => {
-      const key = 'mdtuddm-11573';
-      formSchema = await $formProvider.getForm(token, key);
-    });
+    describe('mdtuddm-11573', () => {
+      let formSchema: FormSchema;
+      beforeEach(async () => {
+        const key = 'mdtuddm-11573';
+        formSchema = await $formProvider.getForm(token, key);
+      });
 
-    it('empty', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('empty', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {},
+          }),
+        );
+
+        expect(received).toEqual({
           data: {},
-        }),
-      );
-
-      expect(received).toEqual({
-        data: {},
+        });
       });
-    });
 
-    it('abc', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('abc', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              abc: 123,
+            },
+          }),
+        );
+
+        expect(received).toEqual({
           data: {
-            abc: 123,
+            editgridLatest1: [
+              {
+                textfieldLatest: 'test1',
+                textfieldLatest1: 'test2',
+              },
+            ],
+            editgridLatest: [],
+            editgrid: [
+              {
+                'textfield3-1': 'test3-1',
+                'textfield3-2': 'test3-2',
+              },
+            ],
           },
-        }),
-      );
-
-      expect(received).toEqual({
-        data: {
-          editgridLatest1: [
-            {
-              textfieldLatest: 'test1',
-              textfieldLatest1: 'test2',
-            },
-          ],
-          editgridLatest: [],
-          editgrid: [
-            {
-              'textfield3-1': 'test3-1',
-              'textfield3-2': 'test3-2',
-            },
-          ],
-        },
+        });
       });
-    });
 
-    it('test3', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('test3', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              'textfield3-1': 33344,
+              textfieldLatest1: 'textfieldLatest1',
+            },
+          }),
+        );
+
+        expect(received).toEqual({
           data: {
-            'textfield3-1': 33344,
-            textfieldLatest1: 'textfieldLatest1',
+            editgridLatest1: [
+              {
+                textfieldLatest: 'test1',
+                textfieldLatest1: 'test2',
+              },
+            ],
+            editgridLatest: [],
+            editgrid: [
+              {
+                'textfield3-1': 'test3-1',
+                'textfield3-2': 'test3-2',
+              },
+            ],
           },
-        }),
-      );
-
-      expect(received).toEqual({
-        data: {
-          editgridLatest1: [
-            {
-              textfieldLatest: 'test1',
-              textfieldLatest1: 'test2',
-            },
-          ],
-          editgridLatest: [],
-          editgrid: [
-            {
-              'textfield3-1': 'test3-1',
-              'textfield3-2': 'test3-2',
-            },
-          ],
-        },
+        });
       });
-    });
 
-    it('test4', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('test4', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              'textfield3-1': { xyz: 1000 },
+              textfieldLatest1: ['wtf'],
+            },
+          }),
+        );
+
+        expect(received).toEqual({
           data: {
-            'textfield3-1': { xyz: 1000 },
-            textfieldLatest1: ['wtf'],
+            editgridLatest1: [
+              {
+                textfieldLatest: 'test1',
+                textfieldLatest1: 'test2',
+              },
+            ],
+            editgridLatest: [],
+            editgrid: [
+              {
+                'textfield3-1': 'test3-1',
+                'textfield3-2': 'test3-2',
+              },
+            ],
           },
-        }),
-      );
+        });
+      });
+    });
 
-      expect(received).toEqual({
-        data: {
-          editgridLatest1: [
+    describe('mdtuddm-16614-complex-validation', () => {
+      let formSchema: FormSchema;
+      beforeEach(async () => {
+        const key = 'mdtuddm-16614-complex-validation';
+        formSchema = await $formProvider.getForm(token, key);
+      });
+
+      it('empty', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {},
+          }),
+        );
+
+        expect(received).toEqual({
+          name: 'ValidationError',
+          details: [
             {
-              textfieldLatest: 'test1',
-              textfieldLatest1: 'test2',
+              message: "Text Field є обов'язковим полем",
+              level: 'error',
+              path: ['textfieldLatest'],
+              context: {
+                validator: 'required',
+                hasLabel: true,
+                setting: true,
+                key: 'textfieldLatest',
+                label: 'Text Field',
+                value: '',
+              },
+            },
+            {
+              message: 'Blue',
+              level: 'error',
+              path: ['num2'],
+              context: {
+                validator: 'required',
+                hasLabel: false,
+                setting: true,
+                key: 'num2',
+                label: 'Number',
+                value: null,
+              },
             },
           ],
-          editgridLatest: [],
-          editgrid: [
+        });
+      });
+
+      it('non-empty', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              textfieldLatest: 'abcdef',
+              num2: 1024,
+            },
+          }),
+        );
+
+        expect(received).toEqual({
+          name: 'ValidationError',
+          details: [
             {
-              'textfield3-1': 'test3-1',
-              'textfield3-2': 'test3-2',
+              message: 'Допустима кількість символів – не менше, ніж 10',
+              level: 'error',
+              path: ['textfieldLatest'],
+              context: {
+                validator: 'minLength',
+                hasLabel: true,
+                setting: 10,
+                key: 'textfieldLatest',
+                label: 'Text Field',
+                value: 'abcdef',
+              },
             },
           ],
-        },
+        });
       });
-    });
-  });
 
-  describe('mdtuddm-16614-complex-validation', () => {
-    let formSchema: FormSchema;
-    beforeEach(async () => {
-      const key = 'mdtuddm-16614-complex-validation';
-      formSchema = await $formProvider.getForm(token, key);
-    });
-
-    it('empty', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
-          data: {},
-        }),
-      );
-
-      expect(received).toEqual({
-        name: 'ValidationError',
-        details: [
-          {
-            message: "Text Field є обов'язковим полем",
-            level: 'error',
-            path: ['textfieldLatest'],
-            context: {
-              validator: 'required',
-              hasLabel: true,
-              setting: true,
-              key: 'textfieldLatest',
-              label: 'Text Field',
-              value: '',
+      it('proper-length', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              textfieldLatest: 'abcdef123456',
+              num2: 2048,
             },
-          },
-          {
-            message: 'Blue',
-            level: 'error',
-            path: ['num2'],
-            context: {
-              validator: 'required',
-              hasLabel: false,
-              setting: true,
-              key: 'num2',
-              label: 'Number',
-              value: null,
-            },
-          },
-        ],
-      });
-    });
+          }),
+        );
 
-    it('non-empty', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
-          data: {
-            textfieldLatest: 'abcdef',
-            num2: 1024,
-          },
-        }),
-      );
-
-      expect(received).toEqual({
-        name: 'ValidationError',
-        details: [
-          {
-            message: 'Допустима кількість символів – не менше, ніж 10',
-            level: 'error',
-            path: ['textfieldLatest'],
-            context: {
-              validator: 'minLength',
-              hasLabel: true,
-              setting: 10,
-              key: 'textfieldLatest',
-              label: 'Text Field',
-              value: 'abcdef',
-            },
-          },
-        ],
-      });
-    });
-
-    it('proper-length', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+        expect(received).toEqual({
           data: {
             textfieldLatest: 'abcdef123456',
             num2: 2048,
+            str0: '',
           },
-        }),
-      );
-
-      expect(received).toEqual({
-        data: {
-          textfieldLatest: 'abcdef123456',
-          num2: 2048,
-          str0: '',
-        },
+        });
       });
-    });
 
-    it('sum', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('sum', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              textfieldLatest: 'abcdef123456',
+              num1: 4096,
+              num2: 2048,
+            },
+          }),
+        );
+
+        expect(received).toEqual({
           data: {
             textfieldLatest: 'abcdef123456',
             num1: 4096,
             num2: 2048,
+            str0: '',
           },
-        }),
-      );
-
-      expect(received).toEqual({
-        data: {
-          textfieldLatest: 'abcdef123456',
-          num1: 4096,
-          num2: 2048,
-          str0: '',
-        },
+        });
       });
-    });
 
-    it('bad sum', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('bad sum', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              textfieldLatest: 'abcdef123456',
+              num1: 4096,
+              num2: 2048,
+              num0: 65536,
+            },
+          }),
+        );
+
+        expect(received).toEqual({
           data: {
             textfieldLatest: 'abcdef123456',
             num1: 4096,
             num2: 2048,
             num0: 65536,
+            str0: '',
           },
-        }),
-      );
-
-      expect(received).toEqual({
-        data: {
-          textfieldLatest: 'abcdef123456',
-          num1: 4096,
-          num2: 2048,
-          num0: 65536,
-          str0: '',
-        },
+        });
       });
-    });
 
-    it('bad sum str0', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+      it('bad sum str0', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              textfieldLatest: 'abcdef123456',
+              num1: 4096,
+              num2: 2048,
+              str0: 65536,
+            },
+          }),
+        );
+
+        expect(received).toEqual({
           data: {
             textfieldLatest: 'abcdef123456',
             num1: 4096,
             num2: 2048,
             str0: 65536,
           },
-        }),
-      );
+        });
+      });
 
-      expect(received).toEqual({
-        data: {
-          textfieldLatest: 'abcdef123456',
-          num1: 4096,
-          num2: 2048,
-          str0: 65536,
-        },
+      it('bad sum str0 format', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              textfieldLatest: 'abcdef123456',
+              num1: 4096,
+              num2: 2048,
+              str0: [16],
+            },
+          }),
+        );
+
+        expect(received).toEqual({
+          name: 'ValidationError',
+          details: [
+            {
+              message: 'Поле не має бути списком',
+              level: 'error',
+              path: ['str0'],
+              context: {
+                validator: 'multiple',
+                hasLabel: true,
+                setting: false,
+                key: 'str0',
+                label: 'Text Field',
+                value: [16],
+              },
+            },
+          ],
+        });
+      });
+
+      it('bad sum num0 format', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              textfieldLatest: 'abcdef123456',
+              num1: 4096,
+              num2: 2048,
+              num0: [16],
+            },
+          }),
+        );
+
+        expect(received).toEqual({
+          name: 'ValidationError',
+          details: [
+            {
+              message: 'Поле не має бути списком',
+              level: 'error',
+              path: ['num0'],
+              context: {
+                validator: 'multiple',
+                hasLabel: true,
+                setting: false,
+                key: 'num0',
+                label: 'Number',
+                value: [16],
+              },
+            },
+          ],
+        });
+      });
+
+      it('bad long string', async () => {
+        const received = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              textfieldLatest: 'abcdef123456'.repeat(10),
+              num1: -25,
+              num2: -15,
+            },
+          }),
+        );
+
+        expect(received).toEqual({
+          name: 'ValidationError',
+          details: [
+            {
+              message: 'Допустима кількість символів – не більше, ніж 20',
+              level: 'error',
+              path: ['textfieldLatest'],
+              context: {
+                validator: 'maxLength',
+                hasLabel: true,
+                setting: 20,
+                key: 'textfieldLatest',
+                label: 'Text Field',
+                value:
+                  'abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456',
+              },
+            },
+          ],
+        });
       });
     });
 
-    it('bad sum str0 format', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
-          data: {
-            textfieldLatest: 'abcdef123456',
-            num1: 4096,
-            num2: 2048,
-            str0: [16],
-          },
-        }),
-      );
-
-      expect(received).toEqual({
-        name: 'ValidationError',
-        details: [
-          {
-            message: 'Поле не має бути списком',
-            level: 'error',
-            path: ['str0'],
-            context: {
-              validator: 'multiple',
-              hasLabel: true,
-              setting: false,
-              key: 'str0',
-              label: 'Text Field',
-              value: [16],
-            },
-          },
-        ],
+    describe('form-with-all-fields-for-validation', () => {
+      let formSchema: FormSchema;
+      beforeEach(async () => {
+        const key = 'form-with-all-fields-for-validation';
+        formSchema = await $formProvider.getForm(token, key);
       });
-    });
 
-    it('bad sum num0 format', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
-          data: {
-            textfieldLatest: 'abcdef123456',
-            num1: 4096,
-            num2: 2048,
-            num0: [16],
-          },
-        }),
-      );
+      it('complex submission', async () => {
+        const result = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              name: 'Василь',
+              emailField: 'email@gmail.com',
+              text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean tempor tortor ornare massa laoreet vestibulum. Donec cursus porttitor molestie. Vestibulum a massa metus. Proin aliquet vestibulum tempus. Nulla et viverra lectus, sit amet condimentum nullam.',
+              grid: [{}],
+              selectBox: { '1': true, '2': false, '3': false },
 
-      expect(received).toEqual({
-        name: 'ValidationError',
-        details: [
-          {
-            message: 'Поле не має бути списком',
-            level: 'error',
-            path: ['num0'],
-            context: {
-              validator: 'multiple',
-              hasLabel: true,
-              setting: false,
-              key: 'num0',
-              label: 'Number',
-              value: [16],
+              checkBox: true,
+              selectComponent: [
+                { label: 'Перший', value: 'Перший' },
+
+                { label: 'Другий', value: 'Другий' },
+              ],
+              submit: true,
+              dateTime: '2021-08-13T09:00:00.000Z',
+              day: '1900-01-01',
+              telephoneNumber: 12312312,
+              radio: 'друге',
             },
-          },
-        ],
-      });
-    });
-
-    it('bad long string', async () => {
-      const received = await _formatValidatePromiseResult(
-        $formValidation.validate(formSchema, {
+          } as FormSubmission),
+        );
+        expect(result).toEqual({
           data: {
-            textfieldLatest: 'abcdef123456'.repeat(10),
-            num1: -25,
-            num2: -15,
-          },
-        }),
-      );
-
-      expect(received).toEqual({
-        name: 'ValidationError',
-        details: [
-          {
-            message: 'Допустима кількість символів – не більше, ніж 20',
-            level: 'error',
-            path: ['textfieldLatest'],
-            context: {
-              validator: 'maxLength',
-              hasLabel: true,
-              setting: 20,
-              key: 'textfieldLatest',
-              label: 'Text Field',
-              value:
-                'abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456abcdef123456',
+            name: 'Василь',
+            emailField: 'email@gmail.com',
+            text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean tempor tortor ornare massa laoreet vestibulum. Donec cursus porttitor molestie. Vestibulum a massa metus. Proin aliquet vestibulum tempus. Nulla et viverra lectus, sit amet condimentum nullam.',
+            telephoneNumber: 12312312,
+            grid: [{}],
+            selectBox: {
+              '1': true,
+              '2': false,
+              '3': false,
             },
+            checkBox: true,
+            selectComponent: [
+              {
+                label: 'Перший',
+                value: 'Перший',
+              },
+              {
+                label: 'Другий',
+                value: 'Другий',
+              },
+            ],
+            radio: 'друге',
+            dateTime: '2021-08-13T09:00:00.000Z',
+            day: '01/01/1900',
           },
-        ],
+        });
       });
     });
   });

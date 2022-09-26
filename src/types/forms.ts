@@ -201,9 +201,9 @@ export interface FormComponent<T = unknown> {
         customPrivate: boolean;
         integer?: string;
         json?: string;
-        max?: string;
+        max?: string | number;
         maxLength?: unknown;
-        min?: string;
+        min?: string | number;
         minLength?: unknown;
         multiple: boolean;
         onlyAvailableItems?: boolean;
@@ -217,6 +217,7 @@ export interface FormComponent<T = unknown> {
   valueProperty?: string;
   widget?:
     | null
+    | string
     | {
         type: string;
       }
@@ -231,18 +232,20 @@ export interface FormComponent<T = unknown> {
         enableTime?: boolean;
         format: string;
         hourIncrement?: number;
-        locale: {
-          firstDayOfWeek: number;
-          weekdays: {
-            shorthand: string[];
-            longhand: string[];
-          };
-          months: {
-            shorthand: string[];
-            longhand: string[];
-          };
-          time_24hr: boolean;
-        };
+        locale:
+          | string
+          | {
+              firstDayOfWeek: number;
+              weekdays: {
+                shorthand: string[];
+                longhand: string[];
+              };
+              months: {
+                shorthand: string[];
+                longhand: string[];
+              };
+              time_24hr: boolean;
+            };
         maxDate?: unknown;
         minDate?: unknown;
         minuteIncrement?: number;
@@ -263,9 +266,9 @@ interface BaseFormSchema {
 }
 
 export interface FormSchema extends BaseFormSchema {
-  _id: string;
+  _id?: string;
   type: string;
-  tags: unknown[];
+  tags?: unknown[];
   owner?: unknown;
   components: FormComponent[];
   title: string;
@@ -275,13 +278,13 @@ export interface FormSchema extends BaseFormSchema {
     roles: string[];
     type: string;
   }>;
-  access: Array<{
+  access?: Array<{
     roles: string[];
     type: string;
   }>;
-  machineName: string;
-  created: string;
-  modified: string;
+  machineName?: string;
+  created?: string;
+  modified?: string;
   display?: string;
 }
 

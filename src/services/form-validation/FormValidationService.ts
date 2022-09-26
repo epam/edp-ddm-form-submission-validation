@@ -41,15 +41,12 @@ export class FormValidationService {
     // TODO: evalContext
     // TODO: this.model and this.token
 
-    if (!submission.data) {
-      console.warn('There is no data; skipping validation for submission', submission);
-      throw new Error('No data in submission!');
-    }
-
     const normalizedFormSchema = {
       ...formSchema,
       components: this.normalizeComponents(formSchema.components),
     };
+
+    this.normalizeSubmission(normalizedFormSchema.components, submission);
 
     const unsets: Array<{
       key: string;
@@ -144,6 +141,30 @@ export class FormValidationService {
     }));
   }
 
+  protected normalizeSubmission(components: ReadonlyArray<Readonly<FormComponent>>, submission: FormSubmission): void {
+    if (!submission.data) {
+      submission.data = {};
+    }
+
+    const data = submission.data;
+
+    for (const key in data) {
+      // TODO: check recursive
+      // TODO: check if array
+      if (data[key] && typeof data[key] === 'string') {
+        const component = this._findComponentInComponents(components, key);
+        if (component && ['day'].includes(component.type)) {
+          const value: string = data[key] as string;
+          if (value?.split('-').length === 3) {
+            const [year, month, day] = value.split('-');
+            const newValue: string = (component.dayFirst ? [day, month, year] : [month, day, year]).join('/');
+            data[key] = newValue;
+          }
+        }
+      }
+    }
+  }
+
   public validateFileMeta(
     formSchemaInput: Readonly<FormSchema>,
     documentKey: string,
@@ -175,7 +196,7 @@ export class FormValidationService {
   }
 
   protected _findComponentInComponents<T = FormComponent>(
-    components: TRecursiveComponent<T>['components'],
+    components: Readonly<TRecursiveComponent<T>['components']>,
     key: string,
   ): T | null {
     for (const c of components ?? []) {
