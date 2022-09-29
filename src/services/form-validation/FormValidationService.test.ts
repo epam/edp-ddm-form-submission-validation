@@ -644,6 +644,96 @@ describe('FormValidationService', () => {
         });
       });
     });
+
+    describe('auto-form-with-files-upload-validation-soma', () => {
+      let formSchema: FormSchema;
+      beforeEach(async () => {
+        const key = 'auto-form-with-files-upload-validation-soma';
+        formSchema = await $formProvider.getForm(token, key);
+      });
+
+      it('if checksum = "", should return ValidationError', async () => {
+        const result = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              secondFile: [
+                {
+                  checksum: '32c0c392938a2a25a5428a98bcc3fe71570a7a73e4ddc76dd6573362e47207e3',
+                  id: '50ac81ad-69a9-49fe-bdf7-ce2531e470ed',
+                },
+              ],
+              thirdFile: [
+                {
+                  checksum: '904f8771817b0a82d1a25dae6d3f80005b2323588511177e0afc03c36515efea',
+                  id: '7f4cf992-58e0-4d7c-b450-9d12dfa4b52b',
+                },
+              ],
+              firstFile: [{ checksum: '', id: '117e5f7c-c649-40d0-a619-e41c26e565da' }],
+              submit: true,
+            },
+          }),
+        );
+        expect(result).toEqual({
+          details: [
+            {
+              context: {
+                hasLabel: false,
+                key: 'firstFile',
+                label: 'Перший файл',
+                setting: true,
+                validator: 'required',
+                value: [],
+              },
+              level: 'error',
+              message: 'File is not provided!',
+              path: ['firstFile'],
+            },
+          ],
+          name: 'ValidationError',
+        });
+      });
+
+      it('if data submission equal null, should return ValidationError', async () => {
+        const result = await _formatValidatePromiseResult(
+          $formValidation.validate(formSchema, {
+            data: {
+              secondFile: [
+                {
+                  checksum: '32c0c392938a2a25a5428a98bcc3fe71570a7a73e4ddc76dd6573362e47207e3',
+                  id: '50ac81ad-69a9-49fe-bdf7-ce2531e470ed',
+                },
+              ],
+              thirdFile: [
+                {
+                  checksum: '904f8771817b0a82d1a25dae6d3f80005b2323588511177e0afc03c36515efea',
+                  id: '7f4cf992-58e0-4d7c-b450-9d12dfa4b52b',
+                },
+              ],
+              firstFile: null,
+              submit: true,
+            },
+          }),
+        );
+        expect(result).toEqual({
+          details: [
+            {
+              context: {
+                hasLabel: false,
+                key: 'firstFile',
+                label: 'Перший файл',
+                setting: true,
+                validator: 'required',
+                value: [],
+              },
+              level: 'error',
+              message: 'File is not provided!',
+              path: ['firstFile'],
+            },
+          ],
+          name: 'ValidationError',
+        });
+      });
+    });
   });
 
   describe('Field Validation', () => {

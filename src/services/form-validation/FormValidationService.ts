@@ -12,6 +12,7 @@ import {
   UnsupportedFileTypeError,
   UnsupportedSizeDefinition,
   ValidationErrorDetailsItem,
+  FileData,
 } from '#app/services/form-validation/types';
 import localizationUA from '#app/i18n/validation/ua';
 import { validateFilePattern } from '#app/services/form-validation/utils/mime';
@@ -151,18 +152,37 @@ export class FormValidationService {
     for (const key in data) {
       // TODO: check recursive
       // TODO: check if array
+      const component = this._findComponentInComponents(components, key);
       if (data[key] && typeof data[key] === 'string') {
-        const component = this._findComponentInComponents(components, key);
         if (component && ['day'].includes(component.type)) {
-          const value: string = data[key] as string;
-          if (value?.split('-').length === 3) {
-            const [year, month, day] = value.split('-');
-            const newValue: string = (component.dayFirst ? [day, month, year] : [month, day, year]).join('/');
-            data[key] = newValue;
-          }
+          data[key] = this.normalizeSubmissionDay(component, data[key] as string);
         }
       }
+
+      if (component?.type === 'file') {
+        data[key] = this.normalizeSubmissionFile(data[key] as FileData);
+      }
     }
+  }
+
+  private normalizeSubmissionDay(component: FormComponent, data: string): string {
+    if (data?.split('-').length === 3) {
+      const [year, month, day] = data.split('-');
+      return (component.dayFirst ? [day, month, year] : [month, day, year]).join('/');
+    }
+    return data;
+  }
+
+  private normalizeSubmissionFile(data: FileData): FileData | [] {
+    const isArray = _.isArray(data) && data.length;
+    const file = (isArray ? data : [data || {}]) as FileData[];
+    const { checksum, id } = file[0];
+
+    if (!checksum || !id) {
+      return [];
+    }
+
+    return data;
   }
 
   public validateFileMeta(
