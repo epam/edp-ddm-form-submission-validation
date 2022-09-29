@@ -16,3 +16,8 @@ export interface FormFieldValidationInput {
   contentType: string;
   size: number;
 }
+
+export interface FileData {
+  checksum: string;
+  id: string;
+}
