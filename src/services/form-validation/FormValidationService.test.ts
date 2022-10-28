@@ -752,7 +752,7 @@ describe('FormValidationService', () => {
 
       it('proper file', () => {
         const result = $formValidation.validateFileMeta(formSchema, 'files', {
-          filename: 'image.png',
+          fileName: 'image.png',
           contentType: 'image/png',
           size: 20,
         });
@@ -762,7 +762,7 @@ describe('FormValidationService', () => {
       it('bad file', () => {
         try {
           $formValidation.validateFileMeta(formSchema, 'files', {
-            filename: 'image.txt',
+            fileName: 'image.txt',
             contentType: 'text/plain',
             size: 8192,
           });
@@ -776,7 +776,7 @@ describe('FormValidationService', () => {
       it('bad file type', () => {
         try {
           $formValidation.validateFileMeta(formSchema, 'files', {
-            filename: 'image.png',
+            fileName: 'image.png',
             contentType: 'text/plain',
             size: 8192,
           });
@@ -790,7 +790,7 @@ describe('FormValidationService', () => {
       it('bad file size', () => {
         try {
           $formValidation.validateFileMeta(formSchema, 'files', {
-            filename: 'image.png',
+            fileName: 'image.png',
             contentType: 'image/png',
             size: 100 * 1024 * 1024,
           });
@@ -802,7 +802,7 @@ describe('FormValidationService', () => {
       it('missing form field', () => {
         try {
           $formValidation.validateFileMeta(formSchema, 'bad-field', {
-            filename: 'image.png',
+            fileName: 'image.png',
             contentType: 'image/png',
             size: 100 * 1024 * 1024,
           });
