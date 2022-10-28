@@ -200,7 +200,7 @@ export class FormValidationService {
 
     let result = true;
     result &&= this._validateFileSize(fileComponent, fileMeta.size);
-    result &&= this._validateFileType(fileComponent, fileMeta.contentType);
+    result &&= this._validateFileType(fileComponent, fileMeta);
 
     return result;
   }
@@ -265,9 +265,9 @@ export class FormValidationService {
     throw new UnsupportedSizeDefinition(fileSizeDefinition);
   }
 
-  protected _validateFileType(component: FormComponent, contentType: string): boolean {
+  protected _validateFileType(component: FormComponent, fileMeta: FormFieldValidationInput): boolean {
     const filePattern = component?.filePattern ?? '';
-    const isAllowed: boolean = validateFilePattern(filePattern, contentType);
+    const isAllowed: boolean = validateFilePattern(fileMeta, filePattern);
     if (isAllowed) {
       return isAllowed;
     }

@@ -12,7 +12,7 @@ export interface ValidationErrorDetailsItem {
 }
 
 export interface FormFieldValidationInput {
-  filename: string;
+  fileName: string;
   contentType: string;
   size: number;
 }

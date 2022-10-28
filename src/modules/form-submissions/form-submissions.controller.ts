@@ -257,7 +257,7 @@ export class FormSubmissionsController {
           responseCode: 200,
         });
         return {
-          isValid: false,
+          isValid: true,
         };
       } else {
         trace.logger.error(`Unknown error while validating schema [${formKey}]`, {

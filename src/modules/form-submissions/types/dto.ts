@@ -17,7 +17,7 @@ export class FormFieldValidationDTO implements FormFieldValidationInput {
   @ApiProperty({
     type: 'string',
   })
-  public filename: string;
+  public fileName: string;
 
   @ApiProperty({
     type: 'string',
