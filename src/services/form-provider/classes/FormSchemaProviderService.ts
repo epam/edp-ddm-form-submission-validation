@@ -5,19 +5,23 @@ import { FormSchema } from '#app/types/forms';
 import { AxiosError } from 'axios';
 import { FormNotFoundError, InvalidTokenError } from '#app/services/form-provider/types';
 import { ConfigService } from '@nestjs/config';
-import type { Trace } from '#app/logging/types';
+import { RequestLoggerService } from '#app/services/request-logger/exports';
 
 @Injectable()
 export class FormSchemaProviderService extends BaseFormProviderService {
-  constructor(protected readonly _config: ConfigService, protected readonly _http: HttpService) {
-    super();
+  constructor(
+    protected readonly _config: ConfigService,
+    protected readonly _http: HttpService,
+    protected readonly _logging: RequestLoggerService,
+  ) {
+    super(_logging);
   }
 
-  public async getForm(trace: Trace, token: string, formKey: string): Promise<FormSchema> {
+  public async getForm(token: string, formKey: string): Promise<FormSchema> {
     const response = await this._http.axiosRef
       .get(`/api/forms/${formKey}`, {
         headers: {
-          ...trace.axiosHeaders,
+          ...this._logging.axiosHeaders,
           'X-Access-Token': token,
         },
       })

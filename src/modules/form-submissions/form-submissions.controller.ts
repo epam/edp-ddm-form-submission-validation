@@ -27,10 +27,12 @@ import {
 import { FormNotFoundError, InvalidTokenError } from '#app/services/form-provider/types';
 import type { FormSchema } from '#app/types/forms';
 import { FormSubmission } from '#app/types/forms';
-import { RequestTrace } from '#app/logging/decorators';
-import { Trace } from '#app/logging/types';
+import { RequestLoggerService } from '#app/services/request-logger/exports';
+import { FORMS_STORAGE } from '#app/services/form-provider/mocked-forms-storage';
 
 const ACCESS_TOKEN_NAME = 'X-Access-Token';
+
+const VALIDATION_ERROR_CODE = 'VALIDATION_ERROR';
 
 @ApiHeader({
   name: 'X-B3-TraceId',
@@ -49,37 +51,38 @@ export class FormSubmissionsController {
   constructor(
     @Inject(FORM_PROVIDER_KEY) protected readonly _provider: BaseFormProviderService,
     protected readonly _validation: FormValidationService,
+    protected readonly _logging: RequestLoggerService,
   ) {}
 
-  protected _getSchema(trace: Trace, accessToken: string, formKey: string): Promise<FormSchema> {
+  protected _getSchema(accessToken: string, formKey: string): Promise<FormSchema> {
     if (!accessToken) {
       throw new UnauthorizedException(); // TODO: i18n
     }
 
-    return this._provider.getForm(trace, accessToken, formKey).catch((err) => {
+    return this._provider.getForm(accessToken, formKey).catch((err) => {
       if (err instanceof InvalidTokenError) {
-        trace.logger.error(`Wrong access token!`, {
+        this._logging.logger.error(`Wrong access token!`, {
           responseCode: 401,
         });
         throw new UnauthorizedException({
-          traceId: trace.traceId,
+          traceId: this._logging.traceId,
           message: 'Wrong access token!', // TODO: i18n
         });
       }
       if (err instanceof FormNotFoundError) {
-        trace.logger.error(`Schema [${formKey}] is not found!`, {
+        this._logging.logger.error(`Schema [${formKey}] is not found!`, {
           responseCode: 404,
         });
         throw new NotFoundException({
-          traceId: trace.traceId,
+          traceId: this._logging.traceId,
           message: 'Form is not found!', // TODO: i18n
         });
       }
-      trace.logger.error(err?.message ?? 'Unknown error', {
+      this._logging.logger.error(err?.message ?? 'Unknown error', {
         responseCode: 500,
       });
       throw new InternalServerErrorException({
-        traceId: trace.traceId,
+        traceId: this._logging.traceId,
         message: 'Unknown error while getting the form', // TODO: i18n
       });
     });
@@ -93,6 +96,7 @@ export class FormSubmissionsController {
   @ApiParam({
     name: 'formKey',
     description: 'Унікальний ідентифікатор схеми UI-форми',
+    examples: Object.fromEntries([...FORMS_STORAGE.keys()].map((key) => [key, { value: key }])),
   })
   @ApiResponse({
     status: 200,
@@ -105,18 +109,76 @@ export class FormSubmissionsController {
   @ApiResponse({
     status: 401,
     description: 'Помилка автентифікації (відсутній токен доступу)',
+    schema: {
+      properties: {
+        traceId: {
+          type: 'string',
+          example: '6bf6c1c1d713ec2f',
+        },
+        message: {
+          type: 'string',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Помилка автентифікації (відсутній токен доступу)',
+    schema: {
+      properties: {
+        traceId: {
+          type: 'string',
+          example: '6bf6c1c1d713ec2f',
+        },
+        message: {
+          type: 'string',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 422,
     description: 'Помилка валідації даних відносно схеми UI-форми',
     schema: {
       properties: {
-        name: {
+        traceId: {
           type: 'string',
-          example: 'ValidationError',
+          example: '6bf6c1c1d713ec2f',
+        },
+        code: {
+          type: 'string',
+          example: VALIDATION_ERROR_CODE,
         },
         details: {
-          type: 'array',
+          type: 'object',
+          properties: {
+            errors: {
+              type: 'array',
+              items: {
+                properties: {
+                  value: {
+                    type: 'string',
+                    example: '"null"',
+                  },
+                  field: {
+                    type: 'string',
+                    example: 'entities',
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'must not be null',
+                  },
+                },
+              },
+              example: [
+                {
+                  value: 'null',
+                  field: 'entities',
+                  message: 'must not be null',
+                },
+              ],
+            },
+          },
         },
       },
     },
@@ -124,6 +186,17 @@ export class FormSubmissionsController {
   @ApiResponse({
     status: 500,
     description: 'Серверна помилка обробки запиту',
+    schema: {
+      properties: {
+        traceId: {
+          type: 'string',
+          example: '6bf6c1c1d713ec2f',
+        },
+        message: {
+          type: 'string',
+        },
+      },
+    },
   })
   @Post(':formKey/validate')
   @HttpCode(200)
@@ -131,15 +204,14 @@ export class FormSubmissionsController {
     @Headers(ACCESS_TOKEN_NAME) accessToken: string,
     @Param('formKey') formKey: string,
     @Body() body: FormSchemaDTO,
-    @RequestTrace() trace: Trace,
   ): Promise<{ data: FormSubmission['data'] }> {
-    trace.logger.info(`Loading schema [${formKey}]`);
-    const schema = await this._getSchema(trace, accessToken, formKey);
+    this._logging.logger.info(`Loading schema [${formKey}]`);
+    const schema = await this._getSchema(accessToken, formKey);
 
     try {
-      trace.logger.info(`Validating against schema [${formKey}]`);
+      this._logging.logger.info(`Validating against schema [${formKey}]`);
       const data = await this._validation.validate(schema, body);
-      trace.logger.info(`Submission data for schema [${formKey}] seems to be valid ...`, {
+      this._logging.logger.info(`Submission data for schema [${formKey}] seems to be valid ...`, {
         responseCode: 200,
       });
       // TODO: normalize response format
@@ -148,24 +220,30 @@ export class FormSubmissionsController {
       };
     } catch (err) {
       if (err instanceof FormValidationError) {
-        trace.logger.error(`Submission for schema [${formKey}] is invalid!`, {
+        this._logging.logger.error(`Submission for schema [${formKey}] is invalid!`, {
           responseCode: 422,
         });
         throw new HttpException(
           {
-            traceId: trace.traceId,
-            name: 'ValidationError',
-            details: err.details,
+            traceId: this._logging.traceId,
+            code: VALIDATION_ERROR_CODE,
+            details: {
+              errors: err.details.map((item) => ({
+                value: JSON.stringify(item.context.value),
+                field: item.context.key,
+                message: item.message,
+              })),
+            },
           },
           422,
         );
       }
 
-      trace.logger.error(`Unknown error while validating schema [${formKey}]`, {
+      this._logging.logger.error(`Unknown error while validating schema [${formKey}]`, {
         responseCode: 500,
       });
       throw new InternalServerErrorException({
-        traceId: trace.traceId,
+        traceId: this._logging.traceId,
         message: 'Unknown validation error', // TODO: i18n
       });
     }
@@ -179,6 +257,7 @@ export class FormSubmissionsController {
   @ApiParam({
     name: 'formKey',
     description: 'Унікальний ідентифікатор схеми UI-форми',
+    examples: Object.fromEntries([...FORMS_STORAGE.keys()].map((key) => [key, { value: key }])),
   })
   @ApiParam({
     name: 'fieldKey',
@@ -206,26 +285,71 @@ export class FormSubmissionsController {
   @ApiResponse({
     status: 401,
     description: 'Помилка автентифікації (відсутній токен доступу)',
+    schema: {
+      properties: {
+        traceId: {
+          type: 'string',
+          example: '6bf6c1c1d713ec2f',
+        },
+        message: {
+          type: 'string',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 404,
     description: 'Схема UI-форми за вказаним {form-key} відсутня',
+    schema: {
+      properties: {
+        traceId: {
+          type: 'string',
+          example: '6bf6c1c1d713ec2f',
+        },
+        message: {
+          type: 'string',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 422,
     description: 'Помилка валідації даних відносно схеми UI-форми',
     schema: {
       properties: {
-        isValid: {
-          type: 'boolean',
-          example: false,
-        },
-        message: {
+        traceId: {
           type: 'string',
+          example: '6bf6c1c1d713ec2f',
         },
         code: {
-          type: 'number',
-          example: 422,
+          type: 'string',
+          example: VALIDATION_ERROR_CODE,
+        },
+        details: {
+          type: 'object',
+          properties: {
+            errors: {
+              type: 'array',
+              items: {
+                properties: {
+                  field: {
+                    type: 'string',
+                    example: 'entities',
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'must not be null',
+                  },
+                },
+              },
+              example: [
+                {
+                  field: 'entities',
+                  message: 'must not be null',
+                },
+              ],
+            },
+          },
         },
       },
     },
@@ -233,6 +357,17 @@ export class FormSubmissionsController {
   @ApiResponse({
     status: 500,
     description: 'Серверна помилка обробки запиту',
+    schema: {
+      properties: {
+        traceId: {
+          type: 'string',
+          example: '6bf6c1c1d713ec2f',
+        },
+        message: {
+          type: 'string',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 501,
@@ -245,36 +380,35 @@ export class FormSubmissionsController {
     @Param('formKey') formKey: string,
     @Param('fieldKey') fieldKey: string,
     @Body() body: FormFieldValidationDTO,
-    @RequestTrace() trace: Trace,
   ): Promise<{ isValid: boolean; message?: string }> {
-    trace.logger.info(`Loading schema [${formKey}]`);
-    const schema = await this._getSchema(trace, accessToken, formKey);
+    this._logging.logger.info(`Loading schema [${formKey}]`);
+    const schema = await this._getSchema(accessToken, formKey);
 
     try {
       const result = this._validation.validateFileMeta(schema, fieldKey, body);
       if (result) {
-        trace.logger.info(`File meta validation (schema [${formKey}])`, {
+        this._logging.logger.info(`File meta validation (schema [${formKey}])`, {
           responseCode: 200,
         });
         return {
           isValid: true,
         };
       } else {
-        trace.logger.error(`Unknown error while validating schema [${formKey}]`, {
+        this._logging.logger.error(`Unknown error while validating schema [${formKey}]`, {
           responseCode: 500,
         });
         throw new InternalServerErrorException({
-          traceId: trace.traceId,
+          traceId: this._logging.traceId,
           message: 'Unknown error while validating the form', // TODO: i18n
         });
       }
     } catch (err) {
       if (err instanceof FormFieldNotFoundError) {
-        trace.logger.error(`Field [${fieldKey}] is not found in the schema [${formKey}]`, {
+        this._logging.logger.error(`Field [${fieldKey}] is not found in the schema [${formKey}]`, {
           responseCode: 404,
         });
         throw new NotFoundException({
-          traceId: trace.traceId,
+          traceId: this._logging.traceId,
           message: err.message,
         });
       }
@@ -284,28 +418,33 @@ export class FormSubmissionsController {
         err instanceof FileMaxSizeError ||
         err instanceof MissingFormComponentError
       ) {
-        trace.logger.error(`Field [${fieldKey}] submission data is not valid for the schema [${formKey}]`, {
+        this._logging.logger.error(`Field [${fieldKey}] submission data is not valid for the schema [${formKey}]`, {
           responseCode: 422,
         });
         throw new HttpException(
           {
-            traceId: trace.traceId,
-            isValid: false,
-            code: 422,
-            message: err.message,
-            // details: [],
+            traceId: this._logging.traceId,
+            code: VALIDATION_ERROR_CODE,
+            details: {
+              errors: [
+                {
+                  field: fieldKey,
+                  message: err.message,
+                },
+              ],
+            },
           },
           422,
         );
       }
-      trace.logger.error(
+      this._logging.logger.error(
         `Unknown error while validating the field [${fieldKey}] submission data against the schema [${formKey}]`,
         {
           responseCode: 500,
         },
       );
       throw new InternalServerErrorException({
-        traceId: trace.traceId,
+        traceId: this._logging.traceId,
         message: 'Unknown error while validating the form', // TODO: i18n
       });
     }
@@ -319,6 +458,7 @@ export class FormSubmissionsController {
   @ApiParam({
     name: 'formKey',
     description: 'Унікальний ідентифікатор схеми UI-форми',
+    examples: Object.fromEntries([...FORMS_STORAGE.keys()].map((key) => [key, { value: key }])),
   })
   @ApiBody({
     type: () => FormFieldsCheckDTO,
@@ -347,19 +487,39 @@ export class FormSubmissionsController {
     description: 'Помилка валідації даних відносно схеми UI-форми',
     schema: {
       properties: {
-        code: {
-          type: 'number',
-          example: 422,
-        },
-        fields: {
-          type: 'object',
-          example: {
-            name: true,
-            email: false,
-          },
-        },
-        message: {
+        traceId: {
           type: 'string',
+          example: '6bf6c1c1d713ec2f',
+        },
+        code: {
+          type: 'string',
+          example: VALIDATION_ERROR_CODE,
+        },
+        details: {
+          type: 'object',
+          properties: {
+            errors: {
+              type: 'array',
+              items: {
+                properties: {
+                  field: {
+                    type: 'string',
+                    example: 'entities',
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'must not be null',
+                  },
+                },
+              },
+              example: [
+                {
+                  field: 'entities',
+                  message: 'must not be null',
+                },
+              ],
+            },
+          },
         },
       },
     },
@@ -370,14 +530,13 @@ export class FormSubmissionsController {
     @Headers(ACCESS_TOKEN_NAME) accessToken: string,
     @Param('formKey') formKey: string,
     @Body() body: FormFieldsCheckDTO,
-    @RequestTrace() trace: Trace,
   ): Promise<{
     code?: number;
     fields: Record<string, boolean>;
     message?: string;
   }> {
-    trace.logger.info(`Loading schema [${formKey}]`);
-    const schema = await this._getSchema(trace, accessToken, formKey);
+    this._logging.logger.info(`Loading schema [${formKey}]`);
+    const schema = await this._getSchema(accessToken, formKey);
 
     const checkedFields = this._validation.checkFieldsExistence(schema, body.fields ?? []);
     const badFields: string[] = [];
@@ -388,20 +547,23 @@ export class FormSubmissionsController {
       }
     });
     if (badFields.length) {
-      trace.logger.error(`Task form does not have fields with names: ${badFields.join(', ')}`, {
+      this._logging.logger.error(`Task form does not have fields with names: ${badFields.join(', ')}`, {
         responseCode: 422,
       });
       throw new HttpException(
         {
-          traceId: trace.traceId,
-          code: 422,
-          message: `Task form does not have fields with names: ${badFields.join(', ')}`, // TODO: i18n
-          fields: Object.fromEntries(checkedFields),
+          traceId: this._logging.traceId,
+          code: VALIDATION_ERROR_CODE,
+          details: {
+            errors: [...checkedFields.entries()]
+              .filter(([, isExisting]) => !isExisting)
+              .map(([field]) => ({ field, message: `Field "${field}" does not exist!` })),
+          },
         },
         422,
       );
     } else {
-      trace.logger.info(`Requested fields exist`, {
+      this._logging.logger.info(`Requested fields exist`, {
         responseCode: 200,
       });
       return {

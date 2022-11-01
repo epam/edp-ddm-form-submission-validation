@@ -11,11 +11,13 @@ import {
 import { FormValidationService } from '#app/services/form-validation/exports';
 import axios from 'axios';
 import type { EnvConfig } from '#app/types/env';
+import { RequestLoggerService } from '#app/services/request-logger/exports';
 
 @Module({
   imports: [HttpModule],
   controllers: [FormSubmissionsController],
   providers: [
+    RequestLoggerService,
     {
       provide: FORM_PROVIDER_AXIOS_KEY,
       useFactory: (config: ConfigService<EnvConfig>): HttpService => {
@@ -29,12 +31,16 @@ import type { EnvConfig } from '#app/types/env';
     },
     {
       provide: FORM_PROVIDER_KEY,
-      useFactory: (config: ConfigService<EnvConfig>, http: HttpService): BaseFormProviderService => {
+      useFactory: (
+        config: ConfigService<EnvConfig>,
+        http: HttpService,
+        logger: RequestLoggerService,
+      ): BaseFormProviderService => {
         return config.get('USE_MOCKED_FORM_PROVIDER') === 'true'
-          ? new MockedFormProviderService()
-          : new FormSchemaProviderService(config, http);
+          ? new MockedFormProviderService(logger)
+          : new FormSchemaProviderService(config, http, logger);
       },
-      inject: [ConfigService, FORM_PROVIDER_AXIOS_KEY],
+      inject: [ConfigService, FORM_PROVIDER_AXIOS_KEY, RequestLoggerService],
     },
     FormValidationService,
   ],
