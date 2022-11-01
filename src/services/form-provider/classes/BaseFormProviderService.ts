@@ -1,6 +1,8 @@
 import type { FormSchema } from '#app/types/forms';
-import type { Trace } from '#app/logging/types';
+import type { RequestLoggerService } from '#app/services/request-logger/exports';
 
 export abstract class BaseFormProviderService {
-  public abstract getForm(trace: Trace, token: string, formKey: string): Promise<FormSchema>;
+  constructor(protected readonly logging: RequestLoggerService) {}
+
+  public abstract getForm(token: string, formKey: string): Promise<FormSchema>;
 }

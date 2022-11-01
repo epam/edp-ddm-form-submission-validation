@@ -3,11 +3,10 @@ import { Injectable } from '@nestjs/common';
 import { FormSchema } from '#app/types/forms';
 import { FormNotFoundError } from '#app/services/form-provider/types';
 import { FORMS_STORAGE } from '#app/services/form-provider/mocked-forms-storage';
-import type { Trace } from '#app/logging/types';
 
 @Injectable()
 export class MockedFormProviderService extends BaseFormProviderService {
-  public async getForm(trace: Trace, token: string, formKey: string): Promise<FormSchema> {
+  public async getForm(token: string, formKey: string): Promise<FormSchema> {
     /* istanbul ignore if */
     if (!FORMS_STORAGE.has(formKey)) {
       throw new FormNotFoundError('Form is not found');
