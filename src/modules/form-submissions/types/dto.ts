@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { FormFieldValidationInput } from '#app/services/form-validation/types';
 import { FormSubmission } from '#app/types/forms';
 
@@ -11,6 +11,11 @@ export class FormSchemaDTO implements FormSubmission {
     type: 'object',
   })
   data: FormDataSchema;
+
+  @ApiPropertyOptional({
+    type: 'string',
+  })
+  processInstanceId?: string;
 }
 
 export class FormFieldValidationDTO implements FormFieldValidationInput {
