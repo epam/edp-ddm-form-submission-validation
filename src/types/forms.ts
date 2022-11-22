@@ -19,7 +19,6 @@ export interface FormComponent<T = unknown> {
   clearOnHide?: boolean;
   clearOnRefresh?: boolean;
   components?: Array<FormComponent>;
-  columns?: Column[];
   conditional?: {
     show?: unknown;
     when?: unknown;
@@ -255,20 +254,8 @@ export interface FormComponent<T = unknown> {
         time_24hr?: boolean;
         useLocaleSettings?: boolean;
       };
-  resourceValidation?: string;
 }
 
-export interface TableComponent {
-  rows: { components: FormComponent[] }[][];
-}
-
-export type Column = {
-  components: FormComponent[];
-  offset: number;
-  push: number;
-  pull: number;
-  size: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-};
 interface BaseFormSchema {
   type: string;
   display?: string;
@@ -303,13 +290,4 @@ export interface FormSchema extends BaseFormSchema {
 
 export interface FormSubmission {
   data: Record<string, unknown>;
-}
-
-export interface FileMetadata {
-  id: string;
-  url: string;
-  name: string;
-  size: number;
-  type: string;
-  checksum: string;
 }

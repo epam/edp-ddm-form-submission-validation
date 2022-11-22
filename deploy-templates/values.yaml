@@ -77,7 +77,3 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-environmentJs:
-  formSchemaProviderUrl: 'http://form-schema-provider:8080'
-  dataFactoryUrl: 'http://registry-rest-api:8080'
