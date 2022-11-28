@@ -12,6 +12,7 @@ import { FormValidationService } from '#app/services/form-validation/exports';
 import axios from 'axios';
 import type { EnvConfig } from '#app/types/env';
 import { RequestLoggerService } from '#app/services/request-logger/exports';
+import { DataFactoryService } from '#app/services/data-factory/DataFactoryService';
 
 @Module({
   imports: [HttpModule],
@@ -43,6 +44,7 @@ import { RequestLoggerService } from '#app/services/request-logger/exports';
       inject: [ConfigService, FORM_PROVIDER_AXIOS_KEY, RequestLoggerService],
     },
     FormValidationService,
+    DataFactoryService,
   ],
 })
 export class FormSubmissionsModule {}
