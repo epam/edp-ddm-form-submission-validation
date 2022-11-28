@@ -25,10 +25,13 @@ import {
   UnsupportedSizeDefinition,
 } from '#app/services/form-validation/types';
 import { FormNotFoundError, InvalidTokenError } from '#app/services/form-provider/types';
-import type { FormSchema } from '#app/types/forms';
+import type { FileMetadata, FormSchema } from '#app/types/forms';
 import { FormSubmission } from '#app/types/forms';
 import { RequestLoggerService } from '#app/services/request-logger/exports';
 import { FORMS_STORAGE } from '#app/services/form-provider/mocked-forms-storage';
+import { findComponents, isFileComponent } from '#app/modules/form-submissions/utils';
+import { DataFactoryService } from '#app/services/data-factory/DataFactoryService';
+import { InvalidCsvFileError } from '#app/services/data-factory/types/errors';
 
 const ACCESS_TOKEN_NAME = 'X-Access-Token';
 
@@ -52,6 +55,7 @@ export class FormSubmissionsController {
     @Inject(FORM_PROVIDER_KEY) protected readonly _provider: BaseFormProviderService,
     protected readonly _validation: FormValidationService,
     protected readonly _logging: RequestLoggerService,
+    protected readonly _dataFactoryService: DataFactoryService,
   ) {}
 
   protected _getSchema(accessToken: string, formKey: string): Promise<FormSchema> {
@@ -214,11 +218,44 @@ export class FormSubmissionsController {
       this._logging.logger.info(`Submission data for schema [${formKey}] seems to be valid ...`, {
         responseCode: 200,
       });
+
+      const fileComponents = findComponents(
+        schema.components,
+        (component) => !!(isFileComponent(component.type) && component.resourceValidation),
+      );
+
+      const { processInstanceId, data: bodyFormData } = body;
+
+      if (fileComponents && processInstanceId) {
+        const results = fileComponents?.map(async (component) => {
+          const bodyData = (bodyFormData[component.key] as unknown as FileMetadata[])[0];
+          return await this._dataFactoryService.validationCsvFile({
+            processInstanceId,
+            accessToken,
+            entity: component.resourceValidation as string,
+            body: {
+              id: bodyData.id,
+              checksum: bodyData.checksum,
+            },
+          });
+        });
+
+        await Promise.all(results);
+      }
+
       // TODO: normalize response format
       return {
         data,
       };
     } catch (err) {
+      if (err instanceof InvalidCsvFileError) {
+        this._logging.logger.error(`csv file is invalid`, {
+          responseCode: 422,
+        });
+
+        throw new HttpException(JSON.parse(err.message), 422);
+      }
+
       if (err instanceof FormValidationError) {
         this._logging.logger.error(`Submission for schema [${formKey}] is invalid!`, {
           responseCode: 422,
