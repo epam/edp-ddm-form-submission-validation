@@ -20,6 +20,7 @@ export interface FormComponent<T = unknown> {
   clearOnRefresh?: boolean;
   components?: Array<FormComponent>;
   columns?: Column[];
+  rows?: { components: FormComponent[] }[][];
   conditional?: {
     show?: unknown;
     when?: unknown;
@@ -263,7 +264,7 @@ export type Column = {
   offset: number;
   push: number;
   pull: number;
-  size: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  size: string;
 };
 
 export interface TableComponent {

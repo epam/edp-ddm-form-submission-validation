@@ -18,11 +18,7 @@ import localizationUA from '#app/i18n/validation/ua';
 import { validateFilePattern } from '#app/services/form-validation/utils/mime';
 import { FileSizeDefinition } from '#app/services/form-validation/types';
 import type { DeepReadonly } from '#app/types/utils';
-
-type TRecursiveComponent<T> = {
-  key: string;
-  components?: Array<T & TRecursiveComponent<T>>;
-};
+import { findComponents } from '#app/modules/form-submissions/utils';
 
 @Injectable()
 export class FormValidationService {
@@ -142,7 +138,7 @@ export class FormValidationService {
     }));
   }
 
-  protected normalizeSubmission(components: ReadonlyArray<Readonly<FormComponent>>, submission: FormSubmission): void {
+  protected normalizeSubmission(components: Array<FormComponent>, submission: FormSubmission): void {
     if (!submission.data) {
       submission.data = {};
     }
@@ -215,20 +211,13 @@ export class FormValidationService {
     return result;
   }
 
-  protected _findComponentInComponents<T = FormComponent>(
-    components: Readonly<TRecursiveComponent<T>['components']>,
+  protected _findComponentInComponents(
+    components: FormComponent[],
     key: string,
-  ): T | null {
-    for (const c of components ?? []) {
-      if (c.key === key) {
-        return c;
-      }
-      if (c.components) {
-        const found = this._findComponentInComponents(c.components, key);
-        if (found) {
-          return found;
-        }
-      }
+  ): FormComponent | null {
+    const foundComponents = findComponents(components, (component: FormComponent) => component.key === key);
+    if (foundComponents?.length) {
+      return foundComponents[0];
     }
     return null;
   }
