@@ -762,6 +762,33 @@ describe('FormValidationService', () => {
         expect(result).toEqual(true);
       });
 
+      it('proper file in columns', () => {
+        const result = $formValidation.validateFileMeta(formSchema, 'fileColumn', {
+          fileName: 'image.png',
+          contentType: 'image/png',
+          size: 20,
+        });
+        expect(result).toEqual(true);
+      });
+
+      it('proper file in table', () => {
+        const result = $formValidation.validateFileMeta(formSchema, 'fileTable', {
+          fileName: 'image.png',
+          contentType: 'image/png',
+          size: 20,
+        });
+        expect(result).toEqual(true);
+      });
+
+      it('proper file in editGrid', () => {
+        const result = $formValidation.validateFileMeta(formSchema, 'fileGrid', {
+          fileName: 'image.png',
+          contentType: 'image/png',
+          size: 20,
+        });
+        expect(result).toEqual(true);
+      });
+
       it('bad file', () => {
         try {
           $formValidation.validateFileMeta(formSchema, 'files', {
