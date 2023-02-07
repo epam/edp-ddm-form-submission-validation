@@ -112,6 +112,9 @@ export class FormValidationService {
       // Clear the non-persistent fields.
       unsets.forEach((unset) => _.unset(unset.data, unset.key));
       submission.data = isEmptyData ? {} : form.data;
+      // fix for memory leak
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (Formio as any).forms[form.id];
       return submission.data; // TODO: Check if we need another return data structure
     }
 
@@ -119,7 +122,9 @@ export class FormValidationService {
     form.errors.forEach((error: { messages: ValidationErrorDetailsItem[] }) =>
       error.messages.forEach((message) => details.push({ ...message, message: entities.decode(message.message) })),
     );
-
+    // fix for memory leak
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (Formio as any).forms[form.id];
     // Return the validation errors.
     throw new FormValidationError(details);
   }
