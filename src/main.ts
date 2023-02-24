@@ -2,6 +2,7 @@ import { AppModule } from '#app/app.module';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import type { INestApplication } from '@nestjs/common';
+import { json } from 'body-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { EnvConfig } from '#app/types/env';
 
@@ -37,6 +38,8 @@ import type { EnvConfig } from '#app/types/env';
     console.log('Setting up the shutdown hooks for the app instance ...');
     app.enableShutdownHooks();
   }
+
+  app.use(json({ limit: config.get('REQUEST_BODY_LIMIT') || '10mb' }));
 
   await app.listen(port);
   return app;
