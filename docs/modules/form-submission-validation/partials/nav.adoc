@@ -1,2 +1,0 @@
-******* xref:form-submission-validation:summary.adoc[Сервіс валідації даних форми]
-******** xref:form-submission-validation:development/development.adoc[Розробка]
