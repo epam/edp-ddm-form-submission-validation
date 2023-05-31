@@ -4,22 +4,22 @@ import { FormComponent, FormSchema, FormSubmission } from '#app/types/forms';
 import { Formio } from 'formiojs';
 import * as entities from 'html-entities';
 import * as _ from 'lodash';
+import * as bytes from 'bytes';
 import {
   FileMaxSizeError,
   FormFieldValidationInput,
   FormValidationError,
   MissingFormComponentError,
   UnsupportedFileTypeError,
-  UnsupportedSizeDefinition,
   ValidationErrorDetailsItem,
   FileData,
 } from '#app/services/form-validation/types';
 import localizationUA from '#app/i18n/validation/ua';
 import { validateFilePattern } from '#app/services/form-validation/utils/mime';
-import { FileSizeDefinition } from '#app/services/form-validation/types';
 import type { DeepReadonly } from '#app/types/utils';
 import { findComponents } from '#app/modules/form-submissions/utils';
 
+const DEFAULT_MAX_FILE_SIZE = '100MB';
 @Injectable()
 export class FormValidationService {
   public readonly language: string = 'ua';
@@ -216,10 +216,7 @@ export class FormValidationService {
     return result;
   }
 
-  protected _findComponentInComponents(
-    components: FormComponent[],
-    key: string,
-  ): FormComponent | null {
+  protected _findComponentInComponents(components: FormComponent[], key: string): FormComponent | null {
     const foundComponents = findComponents(components, (component: FormComponent) => component.key === key);
     if (foundComponents?.length) {
       return foundComponents[0];
@@ -228,35 +225,13 @@ export class FormValidationService {
   }
 
   protected _validateFileSize(component: FormComponent, size: number): boolean {
-    if (!component.fileMaxSize) {
-      throw new UnsupportedSizeDefinition('', 'Missing file max size!'); // TODO: i18n
-    }
-    const fileMaxSizePattern: string = component.fileMaxSize;
-    const fileSizeDefinition: string = this._getValidFileSizeDefinition(fileMaxSizePattern);
-    const fileSize: number = this._getFileSizeBySizeDefinition(size, fileSizeDefinition);
-
-    const fileMaxSize: number = +`${fileMaxSizePattern}`.replace(/\D/g, '');
-
+    const componentFileMaxSize = component.fileMaxSize || DEFAULT_MAX_FILE_SIZE;
+    const fileSize = bytes.parse(size);
+    const fileMaxSize = bytes.parse(componentFileMaxSize);
     if (fileSize > fileMaxSize) {
-      throw new FileMaxSizeError(fileMaxSizePattern);
+      throw new FileMaxSizeError(componentFileMaxSize);
     }
     return true;
-  }
-
-  protected _getValidFileSizeDefinition(fileMaxSizePattern: string): string {
-    const fileSizeDefinition = fileMaxSizePattern.replace(/\d+/g, '');
-    if (Object.values<string>(FileSizeDefinition).includes(fileSizeDefinition)) {
-      return fileSizeDefinition;
-    }
-    throw new UnsupportedSizeDefinition(fileSizeDefinition);
-  }
-
-  protected _getFileSizeBySizeDefinition(size: number, fileSizeDefinition: string): number {
-    if (fileSizeDefinition === 'MB') {
-      // TODO: check KB?
-      return size / (1024 * 1024);
-    }
-    throw new UnsupportedSizeDefinition(fileSizeDefinition);
   }
 
   protected _validateFileType(component: FormComponent, fileMeta: FormFieldValidationInput): boolean {
