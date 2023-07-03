@@ -2,7 +2,7 @@ import { Column, TableComponent, FormComponent } from '#app/types/forms';
 import * as _ from 'lodash';
 
 export const isFileComponent = (type: string): boolean =>
-  type === 'file' || type === 'fileLatest' || type === 'fileLegacy';
+  type === 'file' || type === 'fileLatest' || type === 'fileLegacy' || type === 'dataImport';
 
 export const isTableComponent = (type: string): boolean =>
   type === 'table' || type === 'tableLatest' || type === 'tableLegacy';
