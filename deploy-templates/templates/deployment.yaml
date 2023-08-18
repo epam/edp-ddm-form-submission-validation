@@ -47,8 +47,15 @@ spec:
               value: {{ .Values.environmentJs.formSchemaProviderUrl }}
             - name: DATA_FACTORY_BASE_URL
               value: {{ .Values.environmentJs.dataFactoryUrl }}
+          {{- if not .Values.global.disableRequestsLimits }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            limits:
+              cpu: 800m
+              memory: 600Mi
+            requests:
+              cpu: 800m
+              memory: 600Mi
+          {{- end }}
           volumeMounts:
             - name: form-submission-validation-environment-js
               mountPath: /app/environment.js
