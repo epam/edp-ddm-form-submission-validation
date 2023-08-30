@@ -108,6 +108,7 @@ export interface FormComponent<T = unknown> {
   input?: boolean;
   inputFormat?: string;
   inputMask?: string;
+  phoneInput?: boolean;
   inputType?: string;
   inputsLabelPosition?: string;
   key: string;

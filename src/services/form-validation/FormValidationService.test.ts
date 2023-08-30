@@ -653,6 +653,70 @@ describe('FormValidationService', () => {
       });
     });
 
+    describe('submission conversions', () => {
+      let formSchema: FormSchema;
+
+      describe('day component', () => {
+        beforeEach(async () => {
+          const key = 'submission-conversions-day';
+          formSchema = await $formProvider.getForm(token, key);
+        });
+
+        it('should correctly convert day component data', async () => {
+          const result = await _formatValidatePromiseResult(
+            $formValidation.validate(formSchema, {
+              data: {
+                grid: [{
+                  day: '1900-01-01',
+                }],
+                day: '1900-01-01',
+              },
+            } as FormSubmission),
+          );
+          expect(result).toEqual({
+            data: {
+              grid: [{
+                day: '01/01/1900',
+              }],
+              day: '01/01/1900',
+            },
+          });
+        });
+      });
+
+      describe('textfield phone component with mask', () => {
+        beforeEach(async () => {
+          const key = 'submission-conversions-phone';
+          formSchema = await $formProvider.getForm(token, key);
+        });
+
+        it('should correctly transform phone data', async () => {
+          const result = await _formatValidatePromiseResult(
+            $formValidation.validate(formSchema, {
+              data: {
+                grid: [{
+                  phone: '380231234567',
+                }],
+                phone: '380231234567',
+                phoneColumn: '380231234567',
+                phoneTable: '380231234567',
+              },
+            } as FormSubmission),
+          );
+          expect(result).toEqual({
+            data: {
+              grid: [{
+                phone: '+38(023)123-45-67',
+              }],
+              phone: '+38(023)123-45-67',
+              phoneColumn: '+38(023)123-45-67',
+              phoneTable: '+38(023)123-45-67',
+            },
+          });
+        });
+      });
+    });
+
     describe('auto-form-with-files-upload-validation-soma', () => {
       let formSchema: FormSchema;
       beforeEach(async () => {

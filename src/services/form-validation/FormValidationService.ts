@@ -17,7 +17,7 @@ import {
 import localizationUA from '#app/i18n/validation/ua';
 import { validateFilePattern } from '#app/services/form-validation/utils/mime';
 import type { DeepReadonly } from '#app/types/utils';
-import { findComponents } from '#app/modules/form-submissions/utils';
+import { convertSubmission, findComponents } from '#app/modules/form-submissions/utils';
 
 const DEFAULT_MAX_FILE_SIZE = '100MB';
 @Injectable()
@@ -34,7 +34,7 @@ export class FormValidationService {
     // TODO: include subforms logic
     // Copying values in order to avoid external data mutations
     const formSchema = _.cloneDeep<FormSchema>(formSchemaInput);
-    const submission = _.cloneDeep<FormSubmission>(submissionInput);
+    let submission = _.cloneDeep<FormSubmission>(submissionInput);
     // TODO: evalContext
     // TODO: this.model and this.token
 
@@ -43,7 +43,7 @@ export class FormValidationService {
       components: this.normalizeComponents(formSchema.components),
     };
 
-    this.normalizeSubmission(normalizedFormSchema.components, submission);
+    submission = this.normalizeSubmission(normalizedFormSchema.components, submission);
 
     const unsets: Array<{
       key: string;
@@ -140,30 +140,61 @@ export class FormValidationService {
       ...component,
       type: this.normalizeComponentType(component.type),
       ...(component.components ? { components: this.normalizeComponents(component.components) } : {}),
+      ...(component.columns ? { columns: component.columns.map((column) => ({ ...column, components: this.normalizeComponents(column.components) })) } : {}),
+      ...(component.rows ? { rows: component.rows.map((row) => row.map((column) => ({ ...column, components: this.normalizeComponents(column.components) }))) } : {}),
     }));
   }
 
-  protected normalizeSubmission(components: Array<FormComponent>, submission: FormSubmission): void {
+  protected normalizeSubmission(components: Array<FormComponent>, formSubmission: FormSubmission): FormSubmission {
+    let submission = _.cloneDeep(formSubmission);
     if (!submission.data) {
       submission.data = {};
     }
 
-    const data = submission.data;
+    submission = convertSubmission(components, submission, (value, component) => {
+      if (component.type === 'day' && value) {
+        return this.normalizeSubmissionDay(component, value as string);
+      }
 
-    for (const key in data) {
-      // TODO: check recursive
-      // TODO: check if array
-      const component = this._findComponentInComponents(components, key);
-      if (data[key] && typeof data[key] === 'string') {
-        if (component && ['day'].includes(component.type)) {
-          data[key] = this.normalizeSubmissionDay(component, data[key] as string);
+      return value;
+    });
+
+    submission = convertSubmission(components, submission, (value, component) => {
+      if (component.type === 'file' && value) {
+        return this.normalizeSubmissionFile(value as FileData)
+      }
+
+      return value;
+    });
+
+    submission = convertSubmission(components, submission, (value, component) => {
+      if (component.type === 'textfield' && value) {
+        return this.normalizeSubmissionTextField(component, value as string)
+      }
+
+      return value;
+    });
+
+    return submission;
+  }
+
+  private normalizeSubmissionTextField(component: FormComponent, data: string): string {
+    const insertNumbersIntoMask = (numberValue: string, inputMask: string) => {
+      let index = -1;
+      return _.map(inputMask, (char) => {
+        if (isNaN(+char)) {
+          return char;
         }
-      }
 
-      if (component?.type === 'file') {
-        data[key] = this.normalizeSubmissionFile(data[key] as FileData);
-      }
+        index += 1;
+        return numberValue[index] || '';
+      }).join('');
+    };
+
+    if (component.inputMask && component.phoneInput) {
+      return insertNumbersIntoMask(data, component.inputMask);
     }
+    return data;
   }
 
   private normalizeSubmissionDay(component: FormComponent, data: string): string {
