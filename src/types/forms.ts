@@ -20,7 +20,7 @@ export interface FormComponent<T = unknown> {
   clearOnRefresh?: boolean;
   components?: Array<FormComponent>;
   columns?: Column[];
-  rows?: { components: FormComponent[] }[][];
+  rows?: { components: FormComponent[] }[][] | number;
   conditional?: {
     show?: unknown;
     when?: unknown;

@@ -101,7 +101,7 @@ export const convertSubmissionData = (
       .find((component: FormComponent) => component.key === key);
     const componentDefinitionInTable = components
       .filter((c) => isTableComponent(c.type))
-      .flatMap((c) => _.get(c, 'rows', []))
+      .flatMap((c) => _.get(c, 'rows', []) as Array<FormComponent[]>)
       .flatMap((item) => item)
       .flatMap((column) => _.get(column, 'components', []))
       .find((component: FormComponent) => component.key === key);

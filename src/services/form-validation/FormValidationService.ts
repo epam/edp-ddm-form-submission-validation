@@ -141,7 +141,7 @@ export class FormValidationService {
       type: this.normalizeComponentType(component.type),
       ...(component.components ? { components: this.normalizeComponents(component.components) } : {}),
       ...(component.columns ? { columns: component.columns.map((column) => ({ ...column, components: this.normalizeComponents(column.components) })) } : {}),
-      ...(component.rows ? { rows: component.rows.map((row) => row.map((column) => ({ ...column, components: this.normalizeComponents(column.components) }))) } : {}),
+      ...(_.isArray(component.rows) ? { rows: component.rows.map((row) => row.map((column) => ({ ...column, components: this.normalizeComponents(column.components) }))) } : {}),
     }));
   }
 
