@@ -3,6 +3,9 @@ import { BaseFormProviderService, MockedFormProviderService } from '#app/service
 import type { FormSchema, FormSubmission } from '#app/types/forms';
 import { RequestLoggerService } from '#app/services/request-logger/exports';
 import type { Request } from 'express';
+import { I18nService } from '#app/modules/i18n/I18n.service';
+import { ConfigService } from '@nestjs/config';
+import { EnvConfig } from '#app/types/env';
 
 async function _formatValidatePromiseResult(p: Promise<unknown>): Promise<unknown> {
   return p
@@ -30,7 +33,10 @@ describe('FormValidationService', () => {
       },
     } as unknown as Request;
     const $logger = new RequestLoggerService(req);
-    $formValidation = new FormValidationService();
+    const $configService = new ConfigService<EnvConfig>({ LANGUAGE: 'uk' });
+    const $i18nService = new I18nService($configService);
+    await $i18nService.init();
+    $formValidation = new FormValidationService($i18nService.i18n);
     $formProvider = new MockedFormProviderService($logger);
   });
 

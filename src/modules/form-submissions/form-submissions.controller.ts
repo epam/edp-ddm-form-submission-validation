@@ -12,7 +12,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { FormFieldsCheckDTO, FormFieldValidationDTO, FormSchemaDTO } from '#app/modules/form-submissions/types/dto';
-import { ApiBody, ApiHeader, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiBody, ApiHeader, ApiParam, ApiResponse, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { FORM_PROVIDER_KEY } from '#app/modules/form-submissions/keys';
 import type { BaseFormProviderService } from '#app/services/form-provider/exports';
 import { FormValidationService } from '#app/services/form-validation/FormValidationService';
@@ -50,6 +50,7 @@ const VALIDATION_ERROR_CODE = 'VALIDATION_ERROR';
   required: false,
 })
 @Controller('api/form-submissions')
+@ApiTags('Form submission validation')
 export class FormSubmissionsController {
   constructor(
     @Inject(FORM_PROVIDER_KEY) protected readonly _provider: BaseFormProviderService,
@@ -92,14 +93,19 @@ export class FormSubmissionsController {
     });
   }
 
+  @ApiOperation({
+    summary: 'Validate form data against scheme',
+    description: '### Endpoint purpose:\n This endpoint allows you to validate form data against a specified UI-form scheme. It accepts the form key in the URL, user authentication, and the form schema in the request body.\n' +
+    '### Validation:\n This endpoint requires a valid _formKey_ in the URL, which is the unique identifier of the UI-form scheme. If the provided form key does not exist, a _404 Not Found_ status code is returned. The endpoint also validates the form data against the specified UI-form scheme. Validation includes checking for required fields and the overall structure of the submitted data. In case of validation errors, the endpoint returns _422 Unprocessable Entity_. The response body includes details about the errors found during validation.',
+  })
   @ApiHeader({
     name: ACCESS_TOKEN_NAME,
-    description: 'Токен доступу користувача',
+    description: 'Token used for endpoint security',
     required: true,
   })
   @ApiParam({
     name: 'formKey',
-    description: 'Унікальний ідентифікатор схеми UI-форми',
+    description: 'Unique identifier of UI-form scheme',
     examples: Object.fromEntries([...FORMS_STORAGE.keys()].map((key) => [key, { value: key }])),
   })
   @ApiResponse({
@@ -108,11 +114,11 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Некоректно сформований запит',
+    description: 'Bad request',
   })
   @ApiResponse({
     status: 401,
-    description: 'Помилка автентифікації (відсутній токен доступу)',
+    description: 'Authentication error (X-Access-Token missing)',
     schema: {
       properties: {
         traceId: {
@@ -127,7 +133,7 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Помилка автентифікації (відсутній токен доступу)',
+    description: 'Form scheme not found',
     schema: {
       properties: {
         traceId: {
@@ -142,7 +148,7 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 422,
-    description: 'Помилка валідації даних відносно схеми UI-форми',
+    description: 'Failed form data validation against UI-form scheme',
     schema: {
       properties: {
         traceId: {
@@ -189,7 +195,7 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 500,
-    description: 'Серверна помилка обробки запиту',
+    description: 'Internal server error',
     schema: {
       properties: {
         traceId: {
@@ -286,26 +292,31 @@ export class FormSubmissionsController {
     }
   }
 
+  @ApiOperation({
+    summary: 'Validate form file field value',
+    description: '### Endpoint purpose:\n This endpoint allows to validate a specific file field against a UI form schema.\n' +
+    '### Validation:\n This endpoint provides validation of file field by size, content type and validation for existance in form scheme.',
+  })
   @ApiHeader({
     name: ACCESS_TOKEN_NAME,
-    description: 'Токен доступу користувача',
+    description: 'Token used for endpoint security',
     required: true,
   })
   @ApiParam({
     name: 'formKey',
-    description: 'Унікальний ідентифікатор схеми UI-форми',
+    description: 'Unique identifier of UI-form scheme',
     examples: Object.fromEntries([...FORMS_STORAGE.keys()].map((key) => [key, { value: key }])),
   })
   @ApiParam({
     name: 'fieldKey',
-    description: 'Унікальний ідентифікатор поля в межах UI-форми',
+    description: 'Unique identifier of field within UI-form',
   })
   @ApiBody({
     type: () => FormFieldValidationDTO,
   })
   @ApiResponse({
     status: 200,
-    description: 'OK з поверненням результату',
+    description: 'OK with return result',
     schema: {
       properties: {
         isValid: {
@@ -317,11 +328,11 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Некоректно сформований запит',
+    description: 'Bad request',
   })
   @ApiResponse({
     status: 401,
-    description: 'Помилка автентифікації (відсутній токен доступу)',
+    description: 'Authentication error (X-Access-Token missing)',
     schema: {
       properties: {
         traceId: {
@@ -336,7 +347,7 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Схема UI-форми за вказаним {form-key} відсутня',
+    description: 'Form scheme not found by provided {form-key}',
     schema: {
       properties: {
         traceId: {
@@ -351,7 +362,7 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 422,
-    description: 'Помилка валідації даних відносно схеми UI-форми',
+    description: 'Failed form data validation against UI-form scheme',
     schema: {
       properties: {
         traceId: {
@@ -393,7 +404,7 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 500,
-    description: 'Серверна помилка обробки запиту',
+    description: 'Internal server error',
     schema: {
       properties: {
         traceId: {
@@ -408,7 +419,7 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 501,
-    description: 'Операція не підтримується системою',
+    description: 'Not Implemented',
   })
   @Post(':formKey/fields/:fieldKey/validate')
   @HttpCode(200)
@@ -487,14 +498,19 @@ export class FormSubmissionsController {
     }
   }
 
+  @ApiOperation({
+    summary: 'Check form fields for existance',
+    description: '### Endpoint purpose:\n This endpoint allows to check list of form firlds for existance.\n' +
+    '### Validation:\n Endpoint retrieves form scheme by _formKey_ and checks for existance provided fields in request body, returns _422_ status code if no such fields.',
+  })
   @ApiHeader({
     name: ACCESS_TOKEN_NAME,
-    description: 'Токен доступу користувача',
+    description: 'Token used for endpoint security',
     required: true,
   })
   @ApiParam({
     name: 'formKey',
-    description: 'Унікальний ідентифікатор схеми UI-форми',
+    description: 'Unique identifier of UI-form scheme',
     examples: Object.fromEntries([...FORMS_STORAGE.keys()].map((key) => [key, { value: key }])),
   })
   @ApiBody({
@@ -502,7 +518,7 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 200,
-    description: 'OK з поверненням результату',
+    description: 'OK with reurn result',
     schema: {
       properties: {
         code: {
@@ -521,7 +537,7 @@ export class FormSubmissionsController {
   })
   @ApiResponse({
     status: 422,
-    description: 'Помилка валідації даних відносно схеми UI-форми',
+    description: 'Failed form data validation against UI-form scheme',
     schema: {
       properties: {
         traceId: {

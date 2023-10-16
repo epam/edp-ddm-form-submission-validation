@@ -1,8 +1,36 @@
 # Default values for form-submission-validation.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+
+global:
+  container:
+    requestsLimitsEnabled: true
+  istio:
+    sidecar:
+      requestsLimitsEnabled: true
+      resources:
+        requests: {}
+        limits: {}
+  registry:
+    formSubmissionValidation:
+      container:
+        envVars: {}
+        resources:
+          requests: {}
+          limits: {}
+      hpa:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 3
+      istio:
+        sidecar:
+          enabled: true
+          resources:
+            requests: {}
+            limits: {}
+      replicas: 1
+
 fullnameOverride: form-submission-validation
-replicaCount: 1
 
 image:
   repository: form-submission-validation
@@ -23,8 +51,7 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: form-submission-validation
 
-podAnnotations:
-  sidecar.istio.io/inject: 'true'
+podAnnotations: {}
 
 podSecurityContext: {}
   # fsGroup: 2000
@@ -64,13 +91,6 @@ resources: {}
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
 
 nodeSelector: {}
 

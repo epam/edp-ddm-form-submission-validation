@@ -19,10 +19,10 @@ import type { EnvConfig } from '#app/types/env';
 
   if (config.get('SWAGGER_DISABLE') !== 'true') {
     const swaggerPath: string = config.get('SWAGGER_PATH', 'swagger-ui');
-    const swaggerTitle: string = config.get('SWAGGER_TITLE', 'API');
+    const swaggerTitle: string = config.get('SWAGGER_TITLE', 'Form submission validation API');
     const swaggerDescription: string | undefined = config.get('SWAGGER_DESCRIPTION');
 
-    const builder: DocumentBuilder = new DocumentBuilder().setTitle(swaggerTitle).setVersion('dev');
+    const builder: DocumentBuilder = new DocumentBuilder().setTitle(swaggerTitle).setVersion('1.0');
     if (swaggerDescription) {
       builder.setDescription(swaggerDescription);
     }

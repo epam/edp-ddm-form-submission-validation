@@ -1,5 +1,5 @@
-{{- if .Values.autoscaling.enabled }}
-apiVersion: autoscaling/v2beta1
+{{- if .Values.global.registry.formSubmissionValidation.hpa.enabled }}
+apiVersion: {{ include "horizontalPodAutoscaler.apiVersion" . }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "form-submission-validation.fullname" . }}
@@ -10,19 +10,11 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "form-submission-validation.fullname" . }}
-  minReplicas: {{ .Values.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  minReplicas: {{ .Values.global.registry.formSubmissionValidation.hpa.minReplicas }}
+  maxReplicas: {{ .Values.global.registry.formSubmissionValidation.hpa.maxReplicas }}
   metrics:
-  {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
     - type: Resource
       resource:
         name: cpu
-        targetAverageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
-  {{- end }}
-  {{- if .Values.autoscaling.targetMemoryUtilizationPercentage }}
-    - type: Resource
-      resource:
-        name: memory
-        targetAverageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage }}
-  {{- end }}
+        targetAverageUtilization: 80
 {{- end }}

@@ -10,4 +10,5 @@ export type EnvConfig = Partial<{
   FORM_PROVIDER_BASE_URL: string;
   USE_MOCKED_FORM_PROVIDER: `${boolean}`;
   REQUEST_BODY_LIMIT: string;
+  LANGUAGE: string;
 }>;

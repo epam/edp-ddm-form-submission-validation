@@ -1,5 +1,5 @@
 import './setup-env';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { FormComponent, FormSchema, FormSubmission } from '#app/types/forms';
 import { Formio } from 'formiojs';
 import * as entities from 'html-entities';
@@ -14,19 +14,19 @@ import {
   ValidationErrorDetailsItem,
   FileData,
 } from '#app/services/form-validation/types';
-import localizationUA from '#app/i18n/validation/ua';
 import { validateFilePattern } from '#app/services/form-validation/utils/mime';
 import type { DeepReadonly } from '#app/types/utils';
 import { convertSubmission, findComponents } from '#app/modules/form-submissions/utils';
+import { I18N_PROVIDER_KEY } from '#app/modules/i18n/keys';
+import type { i18n as I18n } from 'i18next';
 
 const DEFAULT_MAX_FILE_SIZE = '100MB';
 @Injectable()
 export class FormValidationService {
-  public readonly language: string = 'ua';
-  public readonly i18n: Readonly<Record<string, Record<string, string>>> = {
-    ua: localizationUA,
-  };
-
+  constructor(@Inject(I18N_PROVIDER_KEY) private readonly i18n: I18n) {
+    this.lang = this.i18n.language;
+  }
+  private lang: string;
   public async validate(
     formSchemaInput: DeepReadonly<FormSchema>,
     submissionInput: DeepReadonly<FormSubmission>,
@@ -55,9 +55,12 @@ export class FormValidationService {
 
     const form = await Formio.createForm(normalizedFormSchema, {
       server: true,
-      language: this.language,
-      i18n: this.i18n,
+      language: this.lang,
+      i18n: {
+        [this.lang]: this.i18n.getResourceBundle(this.lang, 'validations'),
+      },
       hooks: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setDataValue(this: any, value: never, key: string, data: never) {
           if (!unsetsEnabled) {
             return value;
@@ -140,8 +143,21 @@ export class FormValidationService {
       ...component,
       type: this.normalizeComponentType(component.type),
       ...(component.components ? { components: this.normalizeComponents(component.components) } : {}),
-      ...(component.columns ? { columns: component.columns.map((column) => ({ ...column, components: this.normalizeComponents(column.components) })) } : {}),
-      ...(_.isArray(component.rows) ? { rows: component.rows.map((row) => row.map((column) => ({ ...column, components: this.normalizeComponents(column.components) }))) } : {}),
+      ...(component.columns
+        ? {
+            columns: component.columns.map((column) => ({
+              ...column,
+              components: this.normalizeComponents(column.components),
+            })),
+          }
+        : {}),
+      ...(_.isArray(component.rows)
+        ? {
+            rows: component.rows.map((row) =>
+              row.map((column) => ({ ...column, components: this.normalizeComponents(column.components) })),
+            ),
+          }
+        : {}),
     }));
   }
 
@@ -161,7 +177,7 @@ export class FormValidationService {
 
     submission = convertSubmission(components, submission, (value, component) => {
       if (component.type === 'file' && value) {
-        return this.normalizeSubmissionFile(value as FileData)
+        return this.normalizeSubmissionFile(value as FileData);
       }
 
       return value;
@@ -169,7 +185,7 @@ export class FormValidationService {
 
     submission = convertSubmission(components, submission, (value, component) => {
       if (component.type === 'textfield' && value) {
-        return this.normalizeSubmissionTextField(component, value as string)
+        return this.normalizeSubmissionTextField(component, value as string);
       }
 
       return value;

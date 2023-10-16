@@ -5,16 +5,25 @@ metadata:
   labels:
     {{- include "form-submission-validation.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  {{- if not .Values.global.registry.formSubmissionValidation.hpa.enabled }}
+  replicas: {{ .Values.global.registry.formSubmissionValidation.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "form-submission-validation.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-    {{- with .Values.podAnnotations }}
+      {{- if or .Values.podAnnotations .Values.global.registry.formSubmissionValidation.istio.sidecar.enabled }}
       annotations:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
+        {{- if .Values.global.registry.formSubmissionValidation.istio.sidecar.enabled }}
+        sidecar.istio.io/inject: "true"
+        {{- if .Values.global.istio.sidecar.requestsLimitsEnabled }}
+        {{- include "formSubmissionValidation.istioResources" . | nindent 8 }}
+        {{- else }}
+        inject.istio.io/templates: 'sidecar,emptyRequestsLimits'
+        {{- end }}
+        {{- end }}
+      {{- end }}
       labels:
         collect.logs: "plain-text"
         {{- include "form-submission-validation.selectorLabels" . | nindent 8 }}
@@ -43,18 +52,19 @@ spec:
             tcpSocket:
               port: http
           env:
+            {{- range $name, $value := .Values.global.registry.formSubmissionValidation.container.envVars }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: LANGUAGE
+              value: {{ .Values.global.language }}
             - name: FORM_PROVIDER_BASE_URL
               value: {{ .Values.environmentJs.formSchemaProviderUrl }}
             - name: DATA_FACTORY_BASE_URL
               value: {{ .Values.environmentJs.dataFactoryUrl }}
-          {{- if not .Values.global.disableRequestsLimits }}
+          {{- if .Values.global.container.requestsLimitsEnabled }}
           resources:
-            limits:
-              cpu: 800m
-              memory: 600Mi
-            requests:
-              cpu: 800m
-              memory: 600Mi
+            {{- toYaml .Values.global.registry.formSubmissionValidation.container.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: form-submission-validation-environment-js
